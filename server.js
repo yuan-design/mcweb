@@ -48,7 +48,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
         res.set('Expires', '0');
     }
 }));
-app.get('/', (req, res) => sendHtml(res, 'index.html'));
+app.get('/', (req, res) => res.redirect('/minecraft'));
 app.get('/minecraft', (req, res) => sendHtml(res, 'minecraft.html'));
 
 function sendHtml(res, filename) {
@@ -305,12 +305,11 @@ function tryPort(port) {
 
 tryPort(PORT).then((actualPort) => {
     console.log('╔══════════════════════════════════════════╗');
-    console.log('║     🌐 端口远程连接工具已启动            ║');
+    console.log('║     🎮 Minecraft 联机大厅已启动          ║');
     console.log(`║     地址: http://localhost:${actualPort}       ║`);
-    console.log('║     支持: TCP | UDP | HTTP              ║');
-    console.log('║     🎮 Minecraft 联机大厅已就绪          ║');
+    console.log('║     服务器 Ping | LAN扫描 | UPnP | 隧道  ║');
     console.log('╚══════════════════════════════════════════╝');
-    openBrowser(`http://localhost:${actualPort}`);
+    openBrowser(`http://localhost:${actualPort}/minecraft`);
 }).catch((err) => {
     console.error('❌ 无法启动服务器:', err.message);
     console.log('\n按 Enter 键退出...');
