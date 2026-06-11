@@ -168,27 +168,6 @@
             margin-bottom: 6px;
         }
 
-        /* ======== 二维码 ======== */
-        .qr-section {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-        .qr-canvas {
-            background: #fff;
-            padding: 8px;
-            border-radius: 8px;
-        }
-        .qr-info {
-            flex: 1;
-            min-width: 180px;
-        }
-        .qr-info p {
-            font-size: 13px;
-            color: var(--text2);
-            line-height: 1.8;
-        }
 
         /* ======== 状态栏 ======== */
         .status-bar {
@@ -339,8 +318,6 @@
             <div class="address-text" id="addressText">等待隧道启动...</div>
         </div>
 
-        <!-- 二维码 -->
-        <div class="qr-section" id="qrSection" style="display:none;margin-top:14px;"></div>
     </div>
 
     <!-- ===== ngrok 配置 ===== -->
@@ -375,7 +352,6 @@
 </div>
 
 <script src="/socket.io.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script>
     const socket = io();
     let tunnelRunning = false;
@@ -497,9 +473,6 @@
             document.getElementById('addressBox').className = 'address-box active';
             document.getElementById('countdownText').textContent = '剩余 ~60 分钟';
 
-            // 二维码
-            showQR(addr);
-
             // 记录历史
             addHistory(addr, currentBackend, data.local_port);
 
@@ -535,7 +508,6 @@
         setStatus('stopped', '已停止', 'badge-stopped');
         document.getElementById('backendBadge').className = 'badge badge-stopped';
         document.getElementById('countdownText').textContent = '';
-        document.getElementById('qrSection').style.display = 'none';
         toast(data.message || '隧道已停止');
     });
 
@@ -561,7 +533,6 @@
             document.getElementById('addressText').textContent = addr;
             document.getElementById('countdownText').textContent = '剩余 ~60 分钟';
             document.getElementById('countdownText').style.color = 'var(--text2)';
-            showQR(addr);
             addHistory(addr, data.backend, currentAddress.split(':')[1] || '');
             try { navigator.clipboard.writeText(addr); } catch(e) {}
             toast('🔄 隧道已自动续期! 新地址: ' + addr);
@@ -583,33 +554,6 @@
         navigator.clipboard.writeText(currentAddress).then(() => {
             toast('✅ 已复制: ' + currentAddress);
         });
-    }
-
-    // ========== 二维码 ==========
-    function showQR(addr) {
-        const section = document.getElementById('qrSection');
-
-        section.style.display = 'flex';
-        section.innerHTML = `
-            <div class="qr-canvas" id="qrCode"></div>
-            <div class="qr-info">
-                <p>📱 <strong style="color:#fff;">手机扫码获取地址</strong></p>
-                <p style="font-size:11px;">朋友用手机扫二维码即可看到地址<br>然后在 Minecraft → 多人游戏 → 直接连接 → 粘贴</p>
-                <p style="font-size:11px;margin-top:4px;word-break:break-all;color:var(--accent2);">${addr}</p>
-            </div>
-        `;
-
-        try {
-            new QRCode(document.getElementById('qrCode'), {
-                text: addr,
-                width: 100,
-                height: 100,
-                colorDark: '#000',
-                colorLight: '#fff'
-            });
-        } catch(e) {
-            document.getElementById('qrCode').innerHTML = '<p style="color:#000;font-size:10px;">QR库加载失败</p>';
-        }
     }
 
     // ========== 倒计时 ==========
