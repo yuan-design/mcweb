@@ -16,8 +16,9 @@ const portFile = path.join(app.getPath('userData'), '.port');
 process.env.ELECTRON = 'true';
 process.env.ELECTRON_PORT_FILE = portFile;
 
-// 启动服务器
-require('./server.js');
+// 启动服务器（保留引用用于清理）
+const serverModule = require('./server.js');
+const { stopTunnel } = require('./lib/tunnel.js');
 
 // ========== 启动画面 ==========
 
@@ -161,3 +162,34 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => { app.quit(); });
+
+// ---- 退出时清理隧道和服务 ----
+app.on('before-quit', async (event) => {
+    // 防止重复清理
+    if (app._cleaningUp) return;
+    app._cleaningUp = true;
+    event.preventDefault();
+
+    console.log('[App] 正在清理...');
+
+    // 1. 停止隧道（杀掉 SSH/ngrok 子进程）
+    try {
+        await stopTunnel();
+        console.log('[App] 隧道已停止');
+    } catch (e) { console.error('[App] 停止隧道失败:', e.message); }
+
+    // 2. 关闭 HTTP 服务器
+    if (serverModule.httpServer) {
+        try {
+            serverModule.httpServer.close();
+            console.log('[App] HTTP 服务已关闭');
+        } catch (e) { console.error('[App] 关闭服务失败:', e.message); }
+    }
+
+    // 强制杀掉可能残留的子进程
+    try {
+        require('child_process').execSync('taskkill /F /IM ssh.exe /T 2>nul & taskkill /F /IM plink.exe /T 2>nul & taskkill /F /IM ngrok.exe /T 2>nul', { stdio: 'ignore' });
+    } catch (e) { /* ignore */ }
+
+    app.exit(0);
+});

@@ -86,10 +86,12 @@ onRenew((info) => {
 // ---- HTTP & Socket.IO 服务器 ----
 let io;
 const httpServer = http.createServer(app);
+module.exports = { app, httpServer, io: null };  // io 延迟注入，httpServer 供关闭用
 
 // ---- Socket.IO 事件 ----
 function setupIO(srv) {
     io = new Server(srv);
+    module.exports.io = io;
 
     io.on('connection', (socket) => {
         console.log(`[+] 客户端: ${socket.id}`);
