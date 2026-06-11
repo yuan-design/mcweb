@@ -1,0 +1,32 @@
+{
+  "name": "port-connector",
+  "version": "1.0.0",
+  "description": "图形化端口远程连接工具 - 支持 TCP/UDP/HTTP",
+  "main": "server.js",
+  "bin": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "build": "pkg . --target node24-win-x64 --output dist/端口远程连接工具.exe",
+    "build-all": "pkg . --target node24-win-x64,node24-linux-x64,node24-macos-x64 --output dist/port-connector"
+  },
+  "pkg": {
+    "assets": [
+      "public/**/*",
+      "lib/**/*"
+    ],
+    "scripts": [
+      "lib/**/*.js"
+    ],
+    "outputPath": "dist"
+  },
+  "dependencies": {
+    "axios": "^1.6.5",
+    "express": "^4.18.2",
+    "socket.io": "^4.7.4"
+  },
+  "devDependencies": {
+    "@yao-pkg/pkg": "^6.20.0",
+    "socket.io-client": "^4.8.3"
+  }
+}

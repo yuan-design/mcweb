@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>端口远程连接工具</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --border: #30363d;
+            --text: #c9d1d9;
+            --text-secondary: #8b949e;
+            --accent: #58a6ff;
+            --accent-hover: #79c0ff;
+            --green: #3fb950;
+            --red: #f85149;
+            --yellow: #d2991d;
+            --purple: #a371f7;
+            --orange: #d2991d;
+            --code-bg: #0d1117;
+            --radius: 8px;
+            --transition: 0.2s ease;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ======== 顶部导航 ======== */
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .header h1 .icon { font-size: 22px; }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .status-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            display: inline-block;
+        }
+        .status-dot.online { background: var(--green); box-shadow: 0 0 6px var(--green); }
+        .status-dot.offline { background: var(--red); }
+        .status-dot.connecting { background: var(--yellow); animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+        /* ======== 主布局 ======== */
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* ======== 左侧面板（协议选择 + 配置） ======== */
+        .side-panel {
+            width: 380px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+        .protocol-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            overflow-x: auto;
+            flex-shrink: 0;
+        }
+        .protocol-tab {
+            padding: 12px 16px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            border-bottom: 2px solid transparent;
+            transition: var(--transition);
+            white-space: nowrap;
+            background: none;
+            border-top: none;
+            border-left: none;
+            border-right: none;
+            font-family: inherit;
+        }
+        .protocol-tab:hover { color: var(--text); }
+        .protocol-tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+        .config-area {
+            padding: 16px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .config-group {
+            margin-bottom: 14px;
+        }
+        .config-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .config-group input,
+        .config-group select,
+        .config-group textarea {
+            width: 100%;
+            padding: 9px 12px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 13px;
+            font-family: 'Consolas', 'Courier New', 'Microsoft YaHei', monospace;
+            transition: var(--transition);
+            outline: none;
+        }
+        .config-group input:focus,
+        .config-group select:focus,
+        .config-group textarea:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
+        }
+        .config-group textarea {
+            resize: vertical;
+            min-height: 60px;
+            font-size: 12px;
+        }
+        .config-row {
+            display: flex;
+            gap: 10px;
+        }
+        .config-row > * { flex: 1; }
+        .config-row .port-input { max-width: 120px; flex: none; }
+        .config-row .method-select { max-width: 100px; flex: none; }
+
+        .btn {
+            padding: 9px 18px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-primary {
+            background: #238636;
+            color: #fff;
+            width: 100%;
+            justify-content: center;
+            font-size: 14px;
+            padding: 11px;
+        }
+        .btn-primary:hover { background: #2ea043; }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-danger {
+            background: var(--red);
+            color: #fff;
+            width: 100%;
+            justify-content: center;
+        }
+        .btn-danger:hover { background: #ff6b63; }
+        .btn-send {
+            background: var(--accent);
+            color: #000;
+        }
+        .btn-send:hover { background: var(--accent-hover); }
+        .btn-small {
+            padding: 5px 10px;
+            font-size: 11px;
+            border-radius: 4px;
+            background: var(--bg-tertiary);
+            color: var(--text);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            font-family: inherit;
+            transition: var(--transition);
+        }
+        .btn-small:hover { background: var(--border); }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .divider {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 14px 0;
+        }
+
+        .info-text {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+            line-height: 1.5;
+        }
+
+        /* ======== 右侧输出区 ======== */
+        .output-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .output-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-secondary);
+            flex-shrink: 0;
+        }
+        .output-toolbar .title {
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .output-toolbar .actions {
+            display: flex;
+            gap: 8px;
+        }
+        .output-console {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 16px;
+            background: var(--code-bg);
+            font-family: 'Consolas', 'Courier New', 'Microsoft YaHei', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .log-entry {
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+        }
+        .log-meta {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 2px;
+        }
+        .log-data { color: var(--text); }
+        .log-hex {
+            color: var(--text-secondary);
+            font-size: 11px;
+            margin-top: 2px;
+        }
+        .log-system { color: var(--yellow); }
+        .log-success { color: var(--green); }
+        .log-error { color: var(--red); }
+        .log-info { color: var(--accent); }
+
+        /* ======== 底部状态栏 ======== */
+        .status-bar {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            padding: 6px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--text-secondary);
+            flex-shrink: 0;
+        }
+        .status-bar .stats { display: flex; gap: 16px; }
+        .status-bar .stat-value { color: var(--text); font-weight: 600; }
+
+        /* ======== 响应式（小屏） ======== */
+        @media (max-width: 800px) {
+            .main-container { flex-direction: column; }
+            .side-panel { width: 100%; max-height: 50%; }
+        }
+
+        /* ======== 滚动条 ======== */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #484f58; }
+
+        /* ======== HTTP响应详情面板 ======== */
+        .http-detail {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 12px;
+            margin-top: 8px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .http-detail .status-code {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .http-detail .status-2xx { color: var(--green); }
+        .http-detail .status-3xx { color: var(--yellow); }
+        .http-detail .status-4xx, .status-5xx { color: var(--red); }
+        .header-item {
+            display: flex;
+            gap: 8px;
+            padding: 2px 0;
+            font-size: 11px;
+        }
+        .header-key { color: var(--purple); font-weight: 600; min-width: 120px; }
+        .header-val { color: var(--text-secondary); word-break: break-all; }
+    </style>
+</head>
+<body>
+
+    <!-- ==================== 顶部导航 ==================== -->
+    <div class="header">
+        <h1>
+            <span class="icon">🌐</span>
+            端口远程连接工具
+        </h1>
+        <div class="header-right">
+            <a href="/minecraft" style="color:var(--accent);text-decoration:none;font-size:13px;font-weight:600;padding:6px 14px;border:1px solid var(--accent);border-radius:6px;transition:0.2s;"
+               onmouseover="this.style.background='rgba(88,166,255,0.1)'" onmouseout="this.style.background='transparent'">
+                🎮 Minecraft 联机
+            </a>
+            <span id="serverStatus">
+                <span class="status-dot online"></span> 服务就绪
+            </span>
+        </div>
+    </div>
+
+    <!-- ==================== 主布局 ==================== -->
+    <div class="main-container">
+
+        <!-- ======== 左侧配置面板 ======== -->
+        <div class="side-panel">
+            <!-- 协议选项卡 -->
+            <div class="protocol-tabs">
+                <button class="protocol-tab active" data-tab="tcp-client">🔌 TCP 客户端</button>
+                <button class="protocol-tab" data-tab="udp">📡 UDP</button>
+                <button class="protocol-tab" data-tab="http">🌍 HTTP</button>
+                <button class="protocol-tab" data-tab="tcp-server">🖥 TCP 监听</button>
+                <button class="protocol-tab" data-tab="udp-server">📻 UDP 监听</button>
+            </div>
+
+            <!-- 配置表单区 -->
+            <div class="config-area" id="configArea">
+                <!-- 内容由 JS 动态渲染 -->
+            </div>
+        </div>
+
+        <!-- ======== 右侧输出面板 ======== -->
+        <div class="output-panel">
+            <div class="output-toolbar">
+                <span class="title">📋 通信日志</span>
+                <div class="actions">
+                    <button class="btn-small" onclick="clearLogs()">🗑 清空</button>
+                    <button class="btn-small" onclick="exportLogs()">📥 导出</button>
+                    <label class="btn-small" style="cursor:pointer;">
+                        <input type="checkbox" id="showHex" checked onchange="renderAllLogs()"> HEX
+                    </label>
+                    <label class="btn-small" style="cursor:pointer;">
+                        <input type="checkbox" id="autoScroll" checked> 自动滚动
+                    </label>
+                </div>
+            </div>
+            <div class="output-console" id="outputConsole">
+                <div class="log-entry log-system">🚀 工具已就绪，请选择协议并配置连接参数...</div>
+                <div class="log-entry log-info">💡 支持: TCP客户端 | UDP通信 | HTTP请求 | TCP监听 | UDP监听</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 底部状态栏 ==================== -->
+    <div class="status-bar">
+        <span id="connStatus">⚪ 未连接</span>
+        <div class="stats">
+            <span>发送: <span class="stat-value" id="bytesSent">0</span> B</span>
+            <span>接收: <span class="stat-value" id="bytesRecv">0</span> B</span>
+            <span>消息: <span class="stat-value" id="msgCount">0</span></span>
+        </div>
+    </div>
+
+    <!-- ==================== Socket.IO 客户端 ==================== -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // ========== 初始化 ==========
+        const socket = io();
+        let currentTab = 'tcp-client';
+        let logs = [];
+        let stats = { sent: 0, recv: 0, msgs: 0 };
+        let isConnected = false;
+
+        // ========== 协议配置模板 ==========
+        const tabConfigs = {
+            'tcp-client': {
+                title: 'TCP 客户端',
+                description: '连接到远程 TCP 服务器，发送/接收数据',
+                fields: `
+                    <div class="config-group">
+                        <label>目标主机</label>
+                        <div class="config-row">
+                            <input type="text" id="tcpHost" placeholder="例如: 192.168.1.100 或 example.com" value="localhost">
+                            <input type="number" id="tcpPort" class="port-input" placeholder="端口" value="8080" min="1" max="65535">
+                        </div>
+                    </div>
+                    <div class="config-group">
+                        <label>超时时间 (毫秒)</label>
+                        <input type="number" id="tcpTimeout" value="10000" min="1000" max="60000">
+                    </div>
+                    <button class="btn btn-primary" id="btnTcpConnect" onclick="tcpConnect()">
+                        🔗 连接
+                    </button>
+                    <button class="btn btn-danger" id="btnTcpDisconnect" onclick="disconnectAll()" style="display:none; margin-top:8px;">
+                        ❌ 断开
+                    </button>
+                    <hr class="divider">
+                    <div class="config-group">
+                        <label>发送数据</label>
+                        <textarea id="tcpSendData" placeholder="输入要发送的内容..."></textarea>
+                    </div>
+                    <button class="btn btn-send" onclick="tcpSend()" style="width:100%; justify-content:center;">
+                        📤 发送
+                    </button>
+                    <p class="info-text">支持文本和 HEX 发送。发送后等待服务器响应。</p>
+                `
+            },
+            'udp': {
+                title: 'UDP 通信',
+                description: '向远程主机发送 UDP 数据包，接收响应',
+                fields: `
+                    <div class="config-group">
+                        <label>目标主机</label>
+                        <div class="config-row">
+                            <input type="text" id="udpHost" placeholder="例如: 192.168.1.100" value="localhost">
+                            <input type="number" id="udpPort" class="port-input" placeholder="端口" value="9999" min="1" max="65535">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" id="btnUdpStart" onclick="udpStart()">
+                        📡 初始化 UDP
+                    </button>
+                    <button class="btn btn-danger" id="btnUdpClose" onclick="disconnectAll()" style="display:none; margin-top:8px;">
+                        ❌ 关闭
+                    </button>
+                    <hr class="divider">
+                    <div class="config-group">
+                        <label>发送数据</label>
+                        <textarea id="udpSendData" placeholder="输入要发送的内容..."></textarea>
+                    </div>
+                    <button class="btn btn-send" onclick="udpSend()" style="width:100%; justify-content:center;">
+                        📤 发送数据包
+                    </button>
+                    <p class="info-text">UDP 是无连接协议，发送后需要等待对方回复。绑定本地端口后即可接收响应。</p>
+                `
+            },
+            'http': {
+                title: 'HTTP 客户端',
+                description: '发送 HTTP 请求，查看完整响应（头+体）',
+                fields: `
+                    <div class="config-group">
+                        <label>请求方法</label>
+                        <div class="config-row">
+                            <select id="httpMethod" class="method-select">
+                                <option>GET</option><option>POST</option><option>PUT</option>
+                                <option>DELETE</option><option>PATCH</option><option>HEAD</option>
+                                <option>OPTIONS</option>
+                            </select>
+                            <input type="text" id="httpUrl" placeholder="https://example.com/api" value="http://localhost:8080">
+                        </div>
+                    </div>
+                    <div class="config-group">
+                        <label>超时时间 (毫秒)</label>
+                        <input type="number" id="httpTimeout" value="30000" min="1000" max="120000">
+                    </div>
+                    <div class="config-group">
+                        <label>自定义 Headers (JSON格式)</label>
+                        <textarea id="httpHeaders" placeholder='{"Content-Type": "application/json", "Authorization": "Bearer token"}' rows="3">{"Content-Type": "application/json"}</textarea>
+                    </div>
+                    <div class="config-group" id="httpBodyGroup">
+                        <label>请求体 (Request Body)</label>
+                        <textarea id="httpBody" placeholder='{"key": "value"}' rows="4"></textarea>
+                    </div>
+                    <button class="btn btn-primary" id="btnHttpSend" onclick="httpRequest()">
+                        🚀 发送请求
+                    </button>
+                    <div id="httpResponseDetail" class="http-detail" style="display:none;"></div>
+                `
+            },
+            'tcp-server': {
+                title: 'TCP 监听器',
+                description: '在本地端口监听 TCP 连接，接收客户端数据',
+                fields: `
+                    <div class="config-group">
+                        <label>监听地址</label>
+                        <div class="config-row">
+                            <input type="text" id="tcpListenHost" placeholder="0.0.0.0" value="0.0.0.0">
+                            <input type="number" id="tcpListenPort" class="port-input" placeholder="端口" value="8888" min="1" max="65535">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" id="btnTcpListenStart" onclick="tcpListenStart()">
+                        🖥 开始监听
+                    </button>
+                    <button class="btn btn-danger" id="btnTcpListenStop" onclick="disconnectAll()" style="display:none; margin-top:8px;">
+                        ⏹ 停止监听
+                    </button>
+                    <hr class="divider">
+                    <div class="config-group">
+                        <label>回复数据（发给最后连接的客户端）</label>
+                        <textarea id="tcpListenSendData" placeholder="输入要回复的内容..."></textarea>
+                    </div>
+                    <button class="btn btn-send" onclick="tcpListenSend()" style="width:100%; justify-content:center;">
+                        📤 回复
+                    </button>
+                    <p class="info-text">启动后将监听指定端口。收到客户端连接时会自动显示。</p>
+                `
+            },
+            'udp-server': {
+                title: 'UDP 监听器',
+                description: '在本地端口监听 UDP 数据包，接收并回复',
+                fields: `
+                    <div class="config-group">
+                        <label>监听地址</label>
+                        <div class="config-row">
+                            <input type="text" id="udpListenHost" placeholder="0.0.0.0" value="0.0.0.0">
+                            <input type="number" id="udpListenPort" class="port-input" placeholder="端口" value="9999" min="1" max="65535">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" id="btnUdpListenStart" onclick="udpListenStart()">
+                        📻 开始监听
+                    </button>
+                    <button class="btn btn-danger" id="btnUdpListenStop" onclick="disconnectAll()" style="display:none; margin-top:8px;">
+                        ⏹ 停止监听
+                    </button>
+                    <hr class="divider">
+                    <div class="config-group">
+                        <label>回复数据（发给最后一个发送者）</label>
+                        <textarea id="udpListenSendData" placeholder="输入要回复的内容..."></textarea>
+                    </div>
+                    <button class="btn btn-send" onclick="udpListenSend()" style="width:100%; justify-content:center;">
+                        📤 回复
+                    </button>
+                    <p class="info-text">启动后将监听 UDP 端口。收到数据包后可以回复给发送者。</p>
+                `
+            }
+        };
+
+        // ========== 渲染配置面板 ==========
+        function renderConfig(tab) {
+            currentTab = tab;
+            const config = tabConfigs[tab];
+            const area = document.getElementById('configArea');
+            area.innerHTML = `
+                <h3 style="margin-bottom:4px; font-size:15px;">${config.title}</h3>
+                <p style="color:var(--text-secondary); font-size:12px; margin-bottom:14px;">${config.description}</p>
+                ${config.fields}
+            `;
+
+            // HTTP 方法切换时控制 body 显示
+            const methodSelect = document.getElementById('httpMethod');
+            const bodyGroup = document.getElementById('httpBodyGroup');
+            if (methodSelect && bodyGroup) {
+                methodSelect.addEventListener('change', () => {
+                    const m = methodSelect.value;
+                    bodyGroup.style.display = (m === 'GET' || m === 'HEAD' || m === 'OPTIONS') ? 'none' : 'block';
+                });
+            }
+        }
+
+        // ========== 选项卡切换 ==========
+        document.querySelectorAll('.protocol-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.protocol-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                const tabName = tab.dataset.tab;
+                // 切换前断开旧连接
+                if (isConnected) {
+                    if (!confirm('切换协议将断开当前连接，是否继续？')) return;
+                    disconnectAll();
+                }
+                renderConfig(tabName);
+            });
+        });
+
+        // ========== 日志系统 ==========
+        function addLog(data, className = '') {
+            const entry = { data, className, timestamp: new Date() };
+            logs.push(entry);
+
+            const console = document.getElementById('outputConsole');
+            const div = document.createElement('div');
+            div.className = `log-entry ${className}`;
+
+            const meta = document.createElement('div');
+            meta.className = 'log-meta';
+            meta.textContent = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+            div.appendChild(meta);
+
+            const content = document.createElement('div');
+            content.className = 'log-data';
+            content.textContent = data;
+            div.appendChild(content);
+
+            // HEX 显示
+            if (data && data.length > 0 && (className === '' || className === 'log-data')) {
+                const hex = document.createElement('div');
+                hex.className = 'log-hex';
+                try {
+                    const hexStr = Array.from(new TextEncoder().encode(data))
+                        .map(b => b.toString(16).padStart(2, '0'))
+                        .join(' ');
+                    hex.textContent = `[HEX] ${hexStr}`;
+                    hex.dataset.hex = hexStr;
+                    if (!document.getElementById('showHex').checked) hex.style.display = 'none';
+                    div.appendChild(hex);
+                } catch (e) { }
+            }
+
+            console.appendChild(div);
+
+            // 自动滚动
+            if (document.getElementById('autoScroll').checked) {
+                console.scrollTop = console.scrollHeight;
+            }
+        }
+
+        function clearLogs() {
+            logs = [];
+            document.getElementById('outputConsole').innerHTML = '';
+            stats = { sent: 0, recv: 0, msgs: 0 };
+            updateStats();
+        }
+
+        function exportLogs() {
+            const text = logs.map(l => `[${l.timestamp.toISOString()}] ${l.data}`).join('\n');
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `port-connector-log-${new Date().toISOString().slice(0, 10)}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function renderAllLogs() {
+            const showHex = document.getElementById('showHex').checked;
+            document.querySelectorAll('.log-hex').forEach(el => {
+                el.style.display = showHex ? 'block' : 'none';
+            });
+        }
+
+        function updateStats() {
+            document.getElementById('bytesSent').textContent = formatBytes(stats.sent);
+            document.getElementById('bytesRecv').textContent = formatBytes(stats.recv);
+            document.getElementById('msgCount').textContent = stats.msgs;
+        }
+
+        function formatBytes(b) {
+            if (b < 1024) return b;
+            if (b < 1048576) return (b / 1024).toFixed(1) + ' K';
+            return (b / 1048576).toFixed(1) + ' M';
+        }
+
+        // ========== 连接状态 ==========
+        function setConnectionStatus(status, message) {
+            const el = document.getElementById('connStatus');
+            switch (status) {
+                case 'connected':
+                case 'ready':
+                case 'listening':
+                    el.innerHTML = `🟢 ${message}`; isConnected = true; break;
+                case 'error':
+                    el.innerHTML = `🔴 ${message}`; isConnected = false; break;
+                case 'disconnected':
+                    el.innerHTML = `⚪ ${message}`; isConnected = false; break;
+                default:
+                    el.innerHTML = `🟡 ${message}`; isConnected = false;
+            }
+            updateButtons(status);
+        }
+
+        function updateButtons(status) {
+            const connected = (status === 'connected' || status === 'ready' || status === 'listening');
+            const btnMap = {
+                'tcp-client': ['btnTcpConnect', 'btnTcpDisconnect'],
+                'udp': ['btnUdpStart', 'btnUdpClose'],
+                'tcp-server': ['btnTcpListenStart', 'btnTcpListenStop'],
+                'udp-server': ['btnUdpListenStart', 'btnUdpListenStop'],
+            };
+            const pair = btnMap[currentTab];
+            if (pair) {
+                const connectBtn = document.getElementById(pair[0]);
+                const disconnectBtn = document.getElementById(pair[1]);
+                if (connectBtn) connectBtn.style.display = connected ? 'none' : 'block';
+                if (disconnectBtn) disconnectBtn.style.display = connected ? 'block' : 'none';
+            }
+        }
+
+        function disconnectAll() {
+            socket.emit('disconnect-all');
+            setConnectionStatus('disconnected', '未连接');
+            // 重置按钮
+            ['btnTcpConnect', 'btnUdpStart', 'btnTcpListenStart', 'btnUdpListenStart'].forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) btn.style.display = 'block';
+            });
+            ['btnTcpDisconnect', 'btnUdpClose', 'btnTcpListenStop', 'btnUdpListenStop'].forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) btn.style.display = 'none';
+            });
+        }
+
+        // ========== TCP 客户端操作 ==========
+        function tcpConnect() {
+            const host = document.getElementById('tcpHost').value.trim();
+            const port = parseInt(document.getElementById('tcpPort').value);
+            const timeout = parseInt(document.getElementById('tcpTimeout').value) || 10000;
+
+            if (!host || !port) { alert('请输入主机和端口'); return; }
+
+            addLog(`[TCP] 正在连接 ${host}:${port}...`, 'log-info');
+            socket.emit('tcp-connect', { host, port, timeout });
+        }
+
+        function tcpSend() {
+            const data = document.getElementById('tcpSendData').value;
+            if (!data) { alert('请输入要发送的数据'); return; }
+            socket.emit('tcp-send', data);
+            addLog(`[TCP →] ${data}`, 'log-success');
+            stats.sent += new TextEncoder().encode(data).length;
+            stats.msgs++;
+            updateStats();
+        }
+
+        // ========== UDP 操作 ==========
+        function udpStart() {
+            const host = document.getElementById('udpHost').value.trim();
+            const port = parseInt(document.getElementById('udpPort').value);
+            if (!host || !port) { alert('请输入主机和端口'); return; }
+            addLog(`[UDP] 初始化 UDP 通信, 目标 ${host}:${port}...`, 'log-info');
+            socket.emit('udp-start', { host, port });
+        }
+
+        function udpSend() {
+            const data = document.getElementById('udpSendData').value;
+            if (!data) { alert('请输入要发送的数据'); return; }
+            socket.emit('udp-send', data);
+            addLog(`[UDP →] ${data}`, 'log-success');
+            stats.sent += new TextEncoder().encode(data).length;
+            stats.msgs++;
+            updateStats();
+        }
+
+        // ========== HTTP 请求 ==========
+        async function httpRequest() {
+            const method = document.getElementById('httpMethod').value;
+            const url = document.getElementById('httpUrl').value.trim();
+            const timeout = parseInt(document.getElementById('httpTimeout').value) || 30000;
+            let headers = {};
+            let body = null;
+
+            if (!url) { alert('请输入 URL'); return; }
+
+            try {
+                const hdrText = document.getElementById('httpHeaders').value.trim();
+                if (hdrText) headers = JSON.parse(hdrText);
+            } catch (e) {
+                alert('Headers 格式错误，请输入有效的 JSON');
+                return;
+            }
+
+            if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+                body = document.getElementById('httpBody').value;
+            }
+
+            const detailDiv = document.getElementById('httpResponseDetail');
+            detailDiv.style.display = 'none';
+
+            addLog(`[HTTP] ${method} ${url}`, 'log-info');
+            if (body) addLog(`[HTTP →] ${body.substring(0, 500)}${body.length > 500 ? '...' : ''}`, 'log-success');
+
+            socket.emit('http-request', { method, url, headers, body, timeout });
+        }
+
+        function displayHttpResponse(response) {
+            const detailDiv = document.getElementById('httpResponseDetail');
+            if (!detailDiv) return;
+
+            if (response.error) {
+                detailDiv.style.display = 'block';
+                detailDiv.innerHTML = `<div class="status-code status-5xx">❌ 错误</div>
+                    <div style="color:var(--red);">${response.message}</div>
+                    <div style="color:var(--text-secondary);margin-top:4px;">耗时: ${response.elapsed}ms</div>`;
+                return;
+            }
+
+            let statusClass = 'status-2xx';
+            if (response.status >= 300 && response.status < 400) statusClass = 'status-3xx';
+            else if (response.status >= 400) statusClass = 'status-4xx';
+
+            let headersHtml = '';
+            if (response.headers) {
+                headersHtml = Object.entries(response.headers)
+                    .map(([k, v]) => `<div class="header-item"><span class="header-key">${k}</span><span class="header-val">${v}</span></div>`)
+                    .join('');
+            }
+
+            detailDiv.style.display = 'block';
+            detailDiv.innerHTML = `
+                <div class="status-code ${statusClass}">${response.status} ${response.statusText}</div>
+                <div style="color:var(--text-secondary);margin-bottom:8px;">
+                    ⏱ ${response.elapsed}ms | 📦 ${formatBytes(response.size || 0)} | 📝 ${response.contentType || 'N/A'}
+                </div>
+                <details><summary style="cursor:pointer;color:var(--accent);">📋 Response Headers</summary>
+                    ${headersHtml}
+                </details>
+                <details open><summary style="cursor:pointer;color:var(--accent);margin-top:8px;">📄 Response Body</summary>
+                    <pre style="margin-top:4px;white-space:pre-wrap;word-break:break-all;max-height:300px;overflow-y:auto;">${escapeHtml(response.body || '')}</pre>
+                </details>
+            `;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ========== TCP 监听器操作 ==========
+        function tcpListenStart() {
+            const host = document.getElementById('tcpListenHost').value.trim() || '0.0.0.0';
+            const port = parseInt(document.getElementById('tcpListenPort').value);
+            if (!port) { alert('请输入端口'); return; }
+            addLog(`[TCP监听] 正在 ${host}:${port} 启动监听...`, 'log-info');
+            socket.emit('tcp-listen-start', { host, port });
+        }
+
+        function tcpListenSend() {
+            const data = document.getElementById('tcpListenSendData').value;
+            if (!data) { alert('请输入要回复的数据'); return; }
+            socket.emit('tcp-listen-send', data);
+            addLog(`[TCP监听 →] ${data}`, 'log-success');
+            stats.sent += new TextEncoder().encode(data).length;
+            stats.msgs++;
+            updateStats();
+        }
+
+        // ========== UDP 监听器操作 ==========
+        function udpListenStart() {
+            const host = document.getElementById('udpListenHost').value.trim() || '0.0.0.0';
+            const port = parseInt(document.getElementById('udpListenPort').value);
+            if (!port) { alert('请输入端口'); return; }
+            addLog(`[UDP监听] 正在 ${host}:${port} 启动监听...`, 'log-info');
+            socket.emit('udp-listen-start', { host, port });
+        }
+
+        function udpListenSend() {
+            const data = document.getElementById('udpListenSendData').value;
+            if (!data) { alert('请输入要回复的数据'); return; }
+            socket.emit('udp-listen-send', data);
+            addLog(`[UDP监听 →] ${data}`, 'log-success');
+            stats.sent += new TextEncoder().encode(data).length;
+            stats.msgs++;
+            updateStats();
+        }
+
+        // ========== Socket.IO 事件处理 ==========
+        socket.on('connection-status', (info) => {
+            let statusMsg = '';
+            const proto = info.protocol;
+
+            if (info.status === 'connected') {
+                statusMsg = `TCP 已连接 ${info.host}:${info.port}`;
+                addLog(`✅ ${statusMsg}`, 'log-success');
+            } else if (info.status === 'ready') {
+                statusMsg = `UDP 就绪 → ${info.host}:${info.port}`;
+                addLog(`✅ ${statusMsg}`, 'log-success');
+            } else if (info.status === 'listening') {
+                statusMsg = `正在监听 ${info.host}:${info.port}`;
+                addLog(`✅ ${statusMsg}`, 'log-success');
+            } else if (info.status === 'error') {
+                statusMsg = info.message;
+                addLog(`❌ ${info.message}`, 'log-error');
+            } else if (info.status === 'disconnected') {
+                statusMsg = '已断开';
+                addLog(`🔌 ${info.message}`, 'log-system');
+            } else if (info.status === 'connecting') {
+                addLog(`⏳ ${info.message}`, 'log-info');
+            } else if (info.status === 'completed') {
+                addLog(`✅ ${info.message}`, 'log-success');
+            }
+
+            setConnectionStatus(info.status, statusMsg || info.message);
+        });
+
+        socket.on('data-received', (info) => {
+            let prefix = '';
+            if (info.from) prefix = `[来自 ${info.from}] `;
+            addLog(`${prefix}${info.data}`);
+            stats.recv += info.size || 0;
+            stats.msgs++;
+            updateStats();
+        });
+
+        socket.on('data-send-result', (result) => {
+            if (!result.success) {
+                addLog(`⚠️ ${result.message}`, 'log-error');
+            }
+        });
+
+        socket.on('http-response', (response) => {
+            if (response.error) {
+                addLog(`❌ HTTP 请求失败: ${response.message} (${response.elapsed}ms)`, 'log-error');
+            } else {
+                addLog(`✅ HTTP ${response.status} ${response.statusText} (${response.elapsed}ms, ${formatBytes(response.size)})`, 'log-success');
+                const preview = response.body ? response.body.substring(0, 1000) : '';
+                if (preview) addLog(preview);
+                if (response.body && response.body.length > 1000) {
+                    addLog(`... (共 ${response.body.length} 字符，在左侧面板查看完整响应)`, 'log-info');
+                }
+            }
+            displayHttpResponse(response);
+            stats.recv += response.size || 0;
+            stats.msgs++;
+            updateStats();
+        });
+
+        socket.on('disconnect', () => {
+            document.getElementById('serverStatus').innerHTML =
+                '<span class="status-dot offline"></span> 服务断开';
+            setConnectionStatus('disconnected', '服务断开');
+        });
+
+        socket.on('connect', () => {
+            document.getElementById('serverStatus').innerHTML =
+                '<span class="status-dot online"></span> 服务就绪';
+        });
+
+        // ========== 快捷键 ==========
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                if (currentTab === 'tcp-client') tcpSend();
+                else if (currentTab === 'udp') udpSend();
+                else if (currentTab === 'http') httpRequest();
+                else if (currentTab === 'tcp-server') tcpListenSend();
+                else if (currentTab === 'udp-server') udpListenSend();
+            }
+        });
+
+        // ========== 初始化 ==========
+        renderConfig('tcp-client');
+        console.log('🌐 端口远程连接工具前端已初始化');
+        console.log('💡 提示: Ctrl+Enter 快速发送数据');
+    </script>
+</body>
+</html>

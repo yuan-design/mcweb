@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft 联机大厅</title>
+    <style>
+        :root {
+            --bg: #0d0d0d;
+            --bg2: #1a1a1a;
+            --bg3: #242424;
+            --border: #333;
+            --text: #d4d4d4;
+            --text2: #888;
+            --mc-green: #5d8c3c;
+            --mc-green-bright: #7ec850;
+            --mc-dirt: #8b6b4a;
+            --mc-stone: #7f7f7f;
+            --mc-water: #3a7fd9;
+            --mc-gold: #f5a623;
+            --mc-red: #c0392b;
+            --accent: #5d8c3c;
+            --online: #4caf50;
+            --offline: #e74c3c;
+            --radius: 8px;
+            --mc-font: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--mc-font);
+            background: var(--bg);
+            background-image:
+                radial-gradient(ellipse at 50% 0%, rgba(93,140,60,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 100%, rgba(58,127,217,0.05) 0%, transparent 50%);
+            color: var(--text);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ======== 顶部 ======== */
+        .header {
+            background: var(--bg2);
+            border-bottom: 2px solid var(--mc-green);
+            padding: 10px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            position: relative;
+        }
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -2px; left: 0; right: 0;
+            height: 1px;
+            background: rgba(126,200,80,0.3);
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .logo {
+            width: 40px; height: 40px;
+            image-rendering: pixelated;
+            background: var(--mc-green);
+            border-radius: 4px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 0 20px rgba(93,140,60,0.3);
+        }
+        .header h1 {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+        }
+        .header h1 .mc {
+            color: var(--mc-green-bright);
+        }
+        .header-nav {
+            display: flex;
+            gap: 4px;
+        }
+        .nav-btn {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            background: var(--bg3);
+            color: var(--text2);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-family: inherit;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .nav-btn:hover { color: #fff; border-color: var(--mc-green); }
+        .nav-btn.active {
+            background: var(--mc-green);
+            color: #fff;
+            border-color: var(--mc-green);
+        }
+
+        /* ======== 主体 ======== */
+        .main { flex: 1; overflow: hidden; display: flex; }
+
+        /* ======== 视图容器 ======== */
+        .view {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+        .view.active { display: flex; flex-direction: column; }
+
+        /* ======== 服务器列表 ======== */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            flex-shrink: 0;
+        }
+        .toolbar-left {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .toolbar-right {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 9px 18px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .btn-bg { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+        .btn-bg:hover { background: #333; border-color: #555; }
+        .btn-primary { background: var(--mc-green); color: #fff; }
+        .btn-primary:hover { background: #6ea844; box-shadow: 0 0 12px rgba(93,140,60,0.3); }
+        .btn-warn { background: var(--mc-gold); color: #000; }
+        .btn-warn:hover { background: #f7b84e; }
+        .btn-danger { background: var(--mc-red); color: #fff; }
+        .btn-danger:hover { background: #d9463a; }
+        .btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 4px; }
+        .btn-xs { padding: 3px 8px; font-size: 11px; border-radius: 3px; }
+
+        .input {
+            padding: 9px 12px;
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 13px;
+            font-family: inherit;
+            outline: none;
+            transition: border 0.2s;
+        }
+        .input:focus { border-color: var(--mc-green); }
+        .input-sm { padding: 6px 10px; font-size: 12px; width: 200px; }
+        .input-xs { padding: 4px 8px; font-size: 11px; width: 140px; }
+
+        /* ======== 服务器卡片 ======== */
+        .server-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 14px;
+            flex: 1;
+            overflow-y: auto;
+            align-content: start;
+        }
+        .server-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            transition: all 0.2s;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        .server-card:hover {
+            border-color: var(--mc-green);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        }
+        .server-card.online { border-left: 4px solid var(--online); }
+        .server-card.offline { border-left: 4px solid var(--offline); opacity: 0.7; }
+        .server-card.pinging { border-left: 4px solid var(--mc-gold); }
+
+        .card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .card-server-name {
+            font-size: 15px;
+            font-weight: 700;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .card-status {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        .card-status.online { background: rgba(76,175,80,0.2); color: var(--online); }
+        .card-status.offline { background: rgba(231,76,60,0.2); color: var(--offline); }
+        .card-status.pinging { background: rgba(245,166,35,0.2); color: var(--mc-gold); }
+
+        .card-meta {
+            display: flex;
+            gap: 16px;
+            font-size: 12px;
+            color: var(--text2);
+            margin-bottom: 6px;
+        }
+        .card-meta span { display: flex; align-items: center; gap: 4px; }
+        .card-motd {
+            font-size: 12px;
+            color: var(--text2);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 10px;
+            font-style: italic;
+        }
+        .card-address {
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            color: var(--mc-gold);
+            background: rgba(0,0,0,0.3);
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        .card-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .player-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .player-progress {
+            flex: 1; height: 6px;
+            background: var(--bg);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .player-fill {
+            height: 100%;
+            background: var(--mc-green-bright);
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+
+        /* ======== LAN 扫描面板 ======== */
+        .lan-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .lan-status {
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .pulse-dot {
+            width: 10px; height: 10px; border-radius: 50%; background: var(--online);
+            animation: pulse 1.5s infinite;
+        }
+        .pulse-dot.stopped { background: var(--offline); animation: none; }
+        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }
+
+        .lan-games-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 10px;
+            flex: 1; overflow-y: auto; align-content: start;
+        }
+        .lan-game-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .lan-game-card:hover { border-color: var(--mc-water); }
+        .lan-game-icon {
+            width: 44px; height: 44px;
+            background: var(--mc-water);
+            border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        .lan-game-info { flex: 1; min-width: 0; }
+        .lan-game-name { font-weight: 600; color: #fff; font-size: 14px; }
+        .lan-game-host { font-size: 12px; color: var(--text2); font-family: 'Consolas',monospace; }
+        .lan-game-motd { font-size: 11px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+        .lan-game-time { font-size: 10px; color: var(--text2); }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text2);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .empty-state .icon { font-size: 60px; margin-bottom: 16px; opacity: 0.6; }
+        .empty-state p { font-size: 14px; margin-bottom: 6px; }
+
+        /* ======== UPnP 面板 ======== */
+        .upnp-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            max-width: 600px;
+            margin-bottom: 16px;
+        }
+        .upnp-card h3 { margin-bottom: 12px; font-size: 16px; color: #fff; }
+        .upnp-result {
+            margin-top: 14px;
+            padding: 14px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+        .upnp-result.success { border-color: var(--online); }
+        .upnp-result.error { border-color: var(--offline); }
+        .big-address {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--mc-green-bright);
+            font-family: 'Consolas', monospace;
+            text-align: center;
+            padding: 10px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 6px;
+            margin: 8px 0;
+            user-select: all;
+            cursor: pointer;
+        }
+        .copy-hint { text-align: center; font-size: 11px; color: var(--text2); margin-top: 4px; }
+
+        /* ======== 添加服务器对话框 ======== */
+        .dialog-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            align-items: center; justify-content: center;
+            z-index: 100;
+        }
+        .dialog-overlay.show { display: flex; }
+        .dialog {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            width: 420px;
+            max-width: 90vw;
+        }
+        .dialog h3 { margin-bottom: 16px; color: #fff; font-size: 16px; }
+        .dialog .form-group { margin-bottom: 12px; }
+        .dialog label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .dialog .input { width: 100%; }
+        .dialog .btn-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+
+        /* ======== 网络信息面板 ======== */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 12px;
+        }
+        .info-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 14px;
+        }
+        .info-card .iface-name {
+            font-weight: 600; color: #fff; margin-bottom: 6px; font-size: 14px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .info-card .ip-line {
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            color: var(--text2);
+            padding: 2px 0;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .tag {
+            font-size: 10px; padding: 1px 6px; border-radius: 8px;
+            font-weight: 600;
+        }
+        .tag-local { background: rgba(58,127,217,0.2); color: var(--mc-water); }
+        .tag-public { background: rgba(76,175,80,0.2); color: var(--online); }
+
+        /* ======== 提示/Toast ======== */
+        .toast {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+            background: var(--bg3); border: 1px solid var(--border);
+            color: #fff; padding: 10px 20px; border-radius: 20px;
+            font-size: 13px; z-index: 200;
+            animation: toastIn 0.3s ease, toastOut 0.3s ease 2.5s forwards;
+            pointer-events: none;
+        }
+        @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(20px); } }
+        @keyframes toastOut { to { opacity: 0; transform: translateX(-50%) translateY(-10px); } }
+
+        /* ======== 滚动条 ======== */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        .hint-box {
+            background: rgba(93,140,60,0.1);
+            border: 1px solid rgba(93,140,60,0.3);
+            border-radius: 8px;
+            padding: 14px;
+            margin-top: 16px;
+            font-size: 13px;
+            color: var(--text2);
+            line-height: 1.6;
+        }
+        .hint-box strong { color: var(--mc-green-bright); }
+    </style>
+</head>
+<body>
+
+    <!-- ===== 顶部导航 ===== -->
+    <div class="header">
+        <div class="header-left">
+            <div class="logo">⛏</div>
+            <h1><span class="mc">Minecraft</span> 联机大厅</h1>
+        </div>
+        <div class="header-nav">
+            <button class="nav-btn active" data-view="servers">📋 服务器列表</button>
+            <button class="nav-btn" data-view="lan">📡 局域网扫描</button>
+            <button class="nav-btn" data-view="upnp">🔧 端口映射</button>
+            <button class="nav-btn" data-view="network">🌐 网络信息</button>
+            <a href="/" class="nav-btn" style="text-decoration:none;">🔌 端口工具</a>
+        </div>
+    </div>
+
+    <!-- ===== 主区域 ===== -->
+    <div class="main">
+
+        <!-- ========== 服务器列表视图 ========== -->
+        <div class="view active" id="view-servers">
+            <div class="toolbar">
+                <div class="toolbar-left">
+                    <button class="btn btn-primary" onclick="showAddDialog()">➕ 添加服务器</button>
+                    <button class="btn btn-bg" onclick="refreshAllServers()">🔄 全部刷新</button>
+                    <button class="btn btn-bg btn-sm" onclick="quickAddDemo()">📥 添加预设服务器</button>
+                </div>
+                <div class="toolbar-right">
+                    <span style="font-size:12px;color:var(--text2);">
+                        共 <b id="serverCount" style="color:#fff;">0</b> 个服务器 ·
+                        在线 <b id="onlineCount" style="color:var(--online);">0</b>
+                    </span>
+                </div>
+            </div>
+            <div class="server-list" id="serverList">
+                <div class="empty-state">
+                    <div class="icon">📋</div>
+                    <p>还没有添加任何服务器</p>
+                    <p>点击"添加服务器"或"添加预设服务器"开始</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 局域网扫描视图 ========== -->
+        <div class="view" id="view-lan">
+            <div class="lan-header">
+                <div class="lan-status">
+                    <span class="pulse-dot stopped" id="lanDot"></span>
+                    <span id="lanStatus">未开始扫描</span>
+                </div>
+                <div style="display:flex;gap:8px;">
+                    <button class="btn btn-primary" id="btnLanStart" onclick="startLanScan()">▶ 开始扫描</button>
+                    <button class="btn btn-danger" id="btnLanStop" onclick="stopLanScan()" style="display:none;">⏹ 停止</button>
+                </div>
+            </div>
+            <div class="lan-games-list" id="lanGamesList">
+                <div class="empty-state">
+                    <div class="icon">📡</div>
+                    <p>点击"开始扫描"寻找局域网内的 Minecraft 游戏</p>
+                    <p>确保对方已经在游戏中选择了"对局域网开放"</p>
+                </div>
+            </div>
+            <div class="hint-box">
+                <strong>💡 使用提示：</strong><br>
+                1. 让你的朋友在 Minecraft 中进入世界 → 按 ESC → "对局域网开放" → 记住端口号<br>
+                2. 点击上方的"开始扫描"，工具会自动发现局域网游戏<br>
+                3. 扫描到游戏后，点击"加入"即可一键连接<br>
+                4. <strong>不同网络？</strong>请切换到"端口映射"标签，使用 UPnP 功能
+            </div>
+        </div>
+
+        <!-- ========== UPnP 端口映射视图 ========== -->
+        <div class="view" id="view-upnp">
+            <div class="upnp-card">
+                <h3>🔧 路由器端口映射 (UPnP)</h3>
+                <p style="color:var(--text2);font-size:13px;margin-bottom:14px;">
+                    自动配置路由器，让你的 Minecraft LAN 游戏可以被外网的朋友访问。
+                    适用于和朋友不在同一局域网时的联机场景。
+                </p>
+                <div style="display:flex;gap:10px;align-items:end;">
+                    <div class="form-group" style="flex:1;">
+                        <label>Minecraft 端口号</label>
+                        <input class="input" type="number" id="upnpPort" value="25565" min="1" max="65535" style="width:100%;">
+                    </div>
+                    <button class="btn btn-primary" id="btnUpnpMap" onclick="startUpnpMapping()">
+                        🔗 开始映射
+                    </button>
+                </div>
+                <div id="upnpResult"></div>
+            </div>
+
+            <!-- ===== 隧道穿透卡片 ===== -->
+            <div class="upnp-card" style="border-left: 3px solid var(--mc-water);">
+                <h3 style="display:flex;align-items:center;gap:8px;">
+                    🚇 隧道穿透（自动）
+                    <span id="tunnelBackendBadge" style="font-size:11px;background:rgba(58,127,217,0.2);color:var(--mc-water);padding:2px 8px;border-radius:10px;font-weight:400;">检测中...</span>
+                </h3>
+                <p style="color:var(--text2);font-size:13px;margin-bottom:14px;">
+                    自动通过公网隧道实现内网穿透。<strong style="color:var(--online);">零配置、无需注册</strong>，点击即用。
+                </p>
+
+                <!-- ngrok 未配置 token -->
+                <div id="tunnelNeedToken" style="display:none;margin-bottom:12px;">
+                    <div style="background:rgba(58,127,217,0.1);border:1px solid rgba(58,127,217,0.3);border-radius:8px;padding:12px;">
+                        <strong style="color:var(--mc-water);">🔑 配置 ngrok 获取固定地址</strong>
+                        <p style="font-size:12px;color:var(--text2);margin:6px 0;">
+                            1. 访问 <a href="https://dashboard.ngrok.com/get-started/your-authtoken" target="_blank" style="color:var(--accent);">ngrok.com</a> 注册并复制你的 authtoken<br>
+                            2. 粘贴到下面，点击「一键配置」即可
+                        </p>
+                        <div style="display:flex;gap:6px;">
+                            <input class="input input-sm" type="text" id="ngrokTokenInput" placeholder="粘贴 ngrok authtoken" style="flex:1;font-family:Consolas,monospace;">
+                            <button class="btn btn-primary btn-sm" onclick="setupNgrok()" style="white-space:nowrap;">🔑 一键配置</button>
+                        </div>
+                        <div id="ngrokSetupResult" style="margin-top:6px;font-size:12px;"></div>
+                    </div>
+                </div>
+
+                <!-- SSH/隧道不可用 -->
+                <div id="tunnelNotReady" style="display:none;">
+                    <div style="background:rgba(245,166,35,0.1);border:1px solid rgba(245,166,35,0.3);border-radius:8px;padding:12px;margin-bottom:12px;">
+                        <strong style="color:var(--mc-gold);">⚠️ 隧道不可用</strong>
+                        <p id="tunnelNotReadyMsg" style="font-size:12px;color:var(--text2);margin-top:6px;"></p>
+                    </div>
+                    <button class="btn btn-bg btn-sm" onclick="checkTunnelInstall()" style="margin-bottom:12px;">
+                        🔄 重新检测
+                    </button>
+                </div>
+
+                <div id="tunnelReady">
+                    <div style="display:flex;gap:10px;align-items:end;">
+                        <div class="form-group" style="flex:1;">
+                            <label>本地端口号</label>
+                            <input class="input" type="number" id="tunnelPort" value="25565" min="1" max="65535" style="width:100%;">
+                        </div>
+                        <button class="btn btn-primary" id="btnTunnelStart" onclick="startTunnelMapping()" style="background:var(--mc-water);">
+                            🚇 启动隧道
+                        </button>
+                        <button class="btn btn-danger" id="btnTunnelStop" onclick="stopTunnelMapping()" style="display:none;">
+                            ⏹ 停止
+                        </button>
+                    </div>
+                    <div id="tunnelResult" style="margin-top:12px;"></div>
+                </div>
+
+                <div id="tunnelStatusBar" style="margin-top:12px;font-size:12px;color:var(--text2);display:none;"></div>
+            </div>
+
+            <div class="hint-box">
+                <strong>📖 说明：</strong><br>
+                • UPnP 会自动配置路由器端口转发，让你获得一个<strong>外网可访问的地址</strong><br>
+                • 映射成功后，把外网地址发给朋友，他们就能直接连上你的 Minecraft<br>
+                • 如果映射失败，可能是路由器不支持或未开启 UPnP 功能<br>
+                • <strong>备选方案：</strong>可以使用樱花穿透(frp)、Radmin VPN、Zerotier 等工具
+            </div>
+        </div>
+
+        <!-- ========== 网络信息视图 ========== -->
+        <div class="view" id="view-network">
+            <button class="btn btn-bg" onclick="loadNetworkInfo()" style="margin-bottom:14px;align-self:flex-start;">
+                🔄 刷新网络信息
+            </button>
+            <div class="info-grid" id="networkInfo">
+                <div class="empty-state">
+                    <div class="icon">🌐</div>
+                    <p>点击"刷新网络信息"查看本机网络状态</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 添加服务器对话框 ===== -->
+    <div class="dialog-overlay" id="addDialog">
+        <div class="dialog">
+            <h3>➕ 添加 Minecraft 服务器</h3>
+            <div class="form-group">
+                <label>服务器名称</label>
+                <input class="input" id="dlgName" placeholder="例如：我的生存服">
+            </div>
+            <div class="form-group">
+                <label>主机地址</label>
+                <input class="input" id="dlgHost" placeholder="例如：mc.example.com 或 192.168.1.100">
+            </div>
+            <div class="form-group">
+                <label>端口号</label>
+                <input class="input" type="number" id="dlgPort" value="25565" min="1" max="65535">
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-bg" onclick="closeAddDialog()">取消</button>
+                <button class="btn btn-primary" onclick="addServer()">添加并检测</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Socket.IO ===== -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let serverList = [];            // 用户保存的服务器列表
+        let lanGames = [];             // 扫描到的 LAN 游戏
+        let lanScanning = false;
+        let currentView = 'servers';
+
+        // ========== 视图切换 ==========
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentView = btn.dataset.view;
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                document.getElementById(`view-${currentView}`).classList.add('active');
+
+                if (currentView === 'network') loadNetworkInfo();
+            });
+        });
+
+        // ========== 本地存储 ==========
+        function saveServers() {
+            localStorage.setItem('mc-servers', JSON.stringify(serverList));
+        }
+        function loadServers() {
+            const raw = localStorage.getItem('mc-servers');
+            if (raw) {
+                try { serverList = JSON.parse(raw); } catch(e) { serverList = []; }
+            }
+        }
+
+        // ========== 渲染服务器列表 ==========
+        function renderServerList() {
+            const container = document.getElementById('serverList');
+            if (serverList.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📋</div>
+                        <p>还没有添加任何服务器</p>
+                        <p>点击"添加服务器"或"添加预设服务器"开始</p>
+                    </div>`;
+            } else {
+                container.innerHTML = serverList.map((s, i) => {
+                    const statusClass = s.pinging ? 'pinging' : (s.online ? 'online' : 'offline');
+                    const statusText = s.pinging ? '检测中...' : (s.online ? '🟢 在线' : '🔴 离线');
+                    const statusIconClass = s.pinging ? 'pinging' : (s.online ? 'online' : 'offline');
+                    const faviconHtml = s.favicon
+                        ? `<img src="${s.favicon}" style="width:32px;height:32px;image-rendering:pixelated;border-radius:4px;">`
+                        : '';
+
+                    let playersHtml = '';
+                    if (s.online && s.players) {
+                        const pct = s.players.max > 0 ? (s.players.online / s.players.max * 100) : 0;
+                        playersHtml = `
+                            <div class="player-bar">
+                                <span style="font-size:11px;color:var(--text2);">👤 ${s.players.online}/${s.players.max}</span>
+                                <div class="player-progress"><div class="player-fill" style="width:${pct}%"></div></div>
+                            </div>`;
+                    }
+
+                    return `
+                    <div class="server-card ${statusClass}" data-index="${i}">
+                        <div class="card-header">
+                            <div class="card-server-name">
+                                ${faviconHtml}
+                                ${s.name || s.host}
+                            </div>
+                            <span class="card-status ${statusIconClass}">${statusText}</span>
+                        </div>
+                        <div class="card-meta">
+                            ${s.version ? `<span>📦 ${s.version}</span>` : ''}
+                            ${s.online && s.ping !== undefined ? `<span>📶 ${s.ping}ms</span>` : ''}
+                        </div>
+                        ${s.motd ? `<div class="card-motd">${escapeHtml(s.motd)}</div>` : ''}
+                        <div class="card-address">${s.host}:${s.port || 25565}</div>
+                        ${playersHtml}
+                        <div class="card-actions" style="margin-top:10px;">
+                            <button class="btn btn-primary btn-sm" onclick="joinServer(${i})">▶ 加入</button>
+                            <button class="btn btn-bg btn-sm" onclick="pingSingle(${i})">🔄 Ping</button>
+                            <button class="btn btn-bg btn-sm" onclick="copyAddress(${i})">📋 复制</button>
+                            <button class="btn btn-danger btn-xs" onclick="deleteServer(${i})" style="margin-left:auto;">✕</button>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+
+            document.getElementById('serverCount').textContent = serverList.length;
+            document.getElementById('onlineCount').textContent = serverList.filter(s => s.online).length;
+        }
+
+        // ========== 添加服务器 ==========
+        function showAddDialog() {
+            document.getElementById('addDialog').classList.add('show');
+            document.getElementById('dlgName').focus();
+        }
+        function closeAddDialog() {
+            document.getElementById('addDialog').classList.remove('show');
+            document.getElementById('dlgName').value = '';
+            document.getElementById('dlgHost').value = '';
+            document.getElementById('dlgPort').value = '25565';
+        }
+        function addServer() {
+            const name = document.getElementById('dlgName').value.trim();
+            const host = document.getElementById('dlgHost').value.trim();
+            const port = parseInt(document.getElementById('dlgPort').value) || 25565;
+
+            if (!host) { toast('请输入主机地址'); return; }
+
+            const server = {
+                id: Date.now().toString(),
+                name: name || host,
+                host,
+                port,
+                online: false,
+                pinging: true
+            };
+
+            serverList.unshift(server);
+            saveServers();
+            closeAddDialog();
+            renderServerList();
+            pingSingle(0);  // 立即检测新添加的
+        }
+
+        // ========== Ping 操作 ==========
+        function pingSingle(index) {
+            const s = serverList[index];
+            if (!s) return;
+            s.pinging = true;
+            s.online = false;
+            renderServerList();
+
+            socket.emit('mc-ping', { host: s.host, port: s.port || 25565, timeout: 5000 });
+        }
+
+        function refreshAllServers() {
+            if (serverList.length === 0) return;
+            serverList.forEach(s => { s.pinging = true; s.online = false; });
+            renderServerList();
+
+            const batch = serverList.map(s => ({ host: s.host, port: s.port || 25565 }));
+            socket.emit('mc-ping-batch', { servers: batch, timeout: 5000 });
+        }
+
+        socket.on('mc-ping-result', (data) => {
+            // 找对应的服务器
+            const srv = serverList.find(s => s.host === data.server?.host && (s.port || 25565) === (data.server?.port || 25565));
+            if (srv) {
+                srv.pinging = false;
+                if (data.success) {
+                    srv.online = true;
+                    srv.version = data.server.version.name;
+                    srv.players = data.server.players;
+                    srv.motd = data.server.motd;
+                    srv.favicon = data.server.favicon;
+                    srv.ping = data.server.ping;
+                } else {
+                    srv.online = false;
+                    srv.error = data.error;
+                }
+                saveServers();
+                renderServerList();
+            }
+        });
+
+        socket.on('mc-ping-batch-result', (data) => {
+            data.servers.forEach(s => {
+                const srv = serverList.find(l =>
+                    l.host === s.host && (l.port || 25565) === (s.port || 25565)
+                );
+                if (srv) {
+                    srv.pinging = false;
+                    if (s.online && s.info) {
+                        srv.online = true;
+                        srv.version = s.info.version.name;
+                        srv.players = s.info.players;
+                        srv.motd = s.info.motd;
+                        srv.favicon = s.info.favicon;
+                    } else {
+                        srv.online = false;
+                        srv.error = s.error;
+                    }
+                }
+            });
+            saveServers();
+            renderServerList();
+        });
+
+        // ========== 加入服务器 ==========
+        async function joinServer(index) {
+            const s = serverList[index];
+            if (!s) return;
+            toast(`正在准备连接 ${s.host}:${s.port || 25565}...`);
+
+            socket.emit('mc-launch-join', { host: s.host, port: s.port || 25565 });
+
+            // 构建 Minecraft 直连地址
+            const addr = `${s.host}:${s.port || 25565}`;
+            await navigator.clipboard.writeText(addr).catch(() => {});
+
+            toast(`📋 地址已复制到剪贴板: ${addr}\n请在 Minecraft 多人游戏中"直接连接"`);
+        }
+
+        function copyAddress(index) {
+            const s = serverList[index];
+            if (!s) return;
+            const addr = `${s.host}:${s.port || 25565}`;
+            navigator.clipboard.writeText(addr).then(() => {
+                toast(`✅ 已复制: ${addr}`);
+            });
+        }
+
+        function deleteServer(index) {
+            if (!confirm(`确定删除服务器 "${serverList[index].name}"？`)) return;
+            serverList.splice(index, 1);
+            saveServers();
+            renderServerList();
+            toast('已删除服务器');
+        }
+
+        // ========== 预设服务器 ==========
+        function quickAddDemo() {
+            const demos = [
+                { name: 'Hypixel (国际)', host: 'mc.hypixel.net', port: 25565 },
+                { name: 'Mineplex', host: 'us.mineplex.com', port: 25565 },
+                { name: '2B2T (无政府)', host: '2b2t.org', port: 25565 },
+                { name: '本地测试', host: 'localhost', port: 25565 },
+            ];
+
+            let added = 0;
+            demos.forEach(d => {
+                if (!serverList.find(s => s.host === d.host && (s.port||25565) === d.port)) {
+                    serverList.push({
+                        id: Date.now().toString() + Math.random(),
+                        name: d.name,
+                        host: d.host,
+                        port: d.port,
+                        online: false,
+                        pinging: true
+                    });
+                    added++;
+                }
+            });
+
+            if (added > 0) {
+                saveServers();
+                renderServerList();
+                refreshAllServers();
+                toast(`✅ 已添加 ${added} 个预设服务器，正在检测状态...`);
+            } else {
+                toast('预设服务器已存在，无需重复添加');
+            }
+        }
+
+        // ========== LAN 扫描 ==========
+        function startLanScan() {
+            lanGames = [];
+            document.getElementById('lanGamesList').innerHTML = `
+                <div class="empty-state">
+                    <div class="icon">🔍</div>
+                    <p>正在扫描局域网...</p>
+                    <p>请确保你的朋友已经在 Minecraft 中"对局域网开放"</p>
+                </div>`;
+
+            lanScanning = true;
+            document.getElementById('btnLanStart').style.display = 'none';
+            document.getElementById('btnLanStop').style.display = 'block';
+            document.getElementById('lanDot').classList.remove('stopped');
+            document.getElementById('lanStatus').textContent = '正在扫描中...';
+
+            socket.emit('mc-lan-scan-start');
+        }
+
+        function stopLanScan() {
+            lanScanning = false;
+            document.getElementById('btnLanStart').style.display = 'block';
+            document.getElementById('btnLanStop').style.display = 'none';
+            document.getElementById('lanDot').classList.add('stopped');
+            document.getElementById('lanStatus').textContent = '扫描已停止';
+            socket.emit('mc-lan-scan-stop');
+        }
+
+        socket.on('mc-lan-game-found', (game) => {
+            if (!lanScanning) return;
+            // 去重
+            if (!lanGames.find(g => g.host === game.host && g.port === game.port)) {
+                lanGames.unshift(game);
+                renderLanGames();
+            }
+        });
+
+        socket.on('mc-lan-scan-status', (data) => {
+            document.getElementById('lanStatus').textContent = data.message;
+            if (data.status === 'stopped' || data.status === 'error') {
+                lanScanning = false;
+                document.getElementById('btnLanStart').style.display = 'block';
+                document.getElementById('btnLanStop').style.display = 'none';
+                document.getElementById('lanDot').classList.add('stopped');
+            }
+        });
+
+        function renderLanGames() {
+            const container = document.getElementById('lanGamesList');
+            if (lanGames.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📡</div>
+                        <p>尚未发现局域网游戏</p>
+                        <p>等待对方开启"对局域网开放"...</p>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = lanGames.map((g, i) => `
+                <div class="lan-game-card">
+                    <div class="lan-game-icon">🎮</div>
+                    <div class="lan-game-info">
+                        <div class="lan-game-name">${escapeHtml(g.motd)}</div>
+                        <div class="lan-game-host">${g.host}:${g.port}</div>
+                        <div class="lan-game-time">🕐 ${new Date(g.discoveredAt).toLocaleTimeString('zh-CN')}</div>
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="joinLanGame('${g.host}', ${g.port})">▶ 加入</button>
+                </div>
+            `).join('');
+        }
+
+        async function joinLanGame(host, port) {
+            const addr = `${host}:${port}`;
+            await navigator.clipboard.writeText(addr).catch(() => {});
+            toast(`📋 地址已复制: ${addr}\n请在 Minecraft 多人游戏中"直接连接"`);
+        }
+
+        // ========== UPnP 端口映射 ==========
+        async function startUpnpMapping() {
+            const port = parseInt(document.getElementById('upnpPort').value) || 25565;
+            const btn = document.getElementById('btnUpnpMap');
+            btn.textContent = '⏳ 正在映射...';
+            btn.disabled = true;
+
+            const resultDiv = document.getElementById('upnpResult');
+            resultDiv.innerHTML = '<p style="color:var(--mc-gold);">⏳ 正在发现路由器并添加端口映射...</p>';
+
+            socket.emit('mc-upnp-map', { port });
+        }
+
+        socket.on('mc-upnp-result', (data) => {
+            const btn = document.getElementById('btnUpnpMap');
+            btn.textContent = '🔗 开始映射';
+            btn.disabled = false;
+
+            const resultDiv = document.getElementById('upnpResult');
+            if (data.success) {
+                resultDiv.innerHTML = `
+                    <div class="upnp-result success">
+                        <h4 style="color:var(--online);margin-bottom:8px;">✅ 端口映射成功!</h4>
+                        <p style="color:var(--text2);font-size:13px;">你的 Minecraft 外网地址：</p>
+                        <div class="big-address" onclick="copyUpnpAddr(this)" title="点击复制">
+                            ${data.externalIP}:${data.externalPort}
+                        </div>
+                        <p class="copy-hint">👆 点击地址复制，然后发给你的朋友</p>
+                        <p style="color:var(--text2);font-size:12px;margin-top:8px;">
+                            内网地址: ${data.internalIP}:${data.externalPort}<br>
+                            让你的朋友在 Minecraft 多人游戏 → 直接连接 → 粘贴上面的外网地址
+                        </p>
+                    </div>`;
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="upnp-result error">
+                        <h4 style="color:var(--offline);margin-bottom:8px;">❌ 映射失败</h4>
+                        <p style="color:var(--text2);">${data.message}</p>
+                        <p style="color:var(--text2);font-size:12px;margin-top:8px;">
+                            💡 可能原因：路由器未开启 UPnP、网络不支持、或防火墙限制<br>
+                            💡 备选方案：使用 <b>Sakura Frp(樱花穿透)</b>、<b>Radmin VPN</b> 或 <b>Zerotier</b>
+                        </p>
+                    </div>`;
+            }
+        });
+
+        socket.on('mc-upnp-status', (data) => {
+            const resultDiv = document.getElementById('upnpResult');
+            resultDiv.innerHTML = `<p style="color:var(--mc-gold);">⏳ ${data.message}</p>`;
+        });
+
+        function copyUpnpAddr(el) {
+            const addr = el.textContent.trim();
+            navigator.clipboard.writeText(addr).then(() => {
+                toast(`✅ 已复制: ${addr}`);
+            });
+        }
+
+        // ========== 隧道穿透 (自动) ==========
+        let tunnelRunning = false;
+
+        function checkTunnelInstall() {
+            socket.emit('tunnel-check');
+        }
+
+        // 一键配置 ngrok
+        function setupNgrok() {
+            const token = document.getElementById('ngrokTokenInput').value.trim();
+            if (!token) { toast('请先粘贴 ngrok authtoken'); return; }
+            const result = document.getElementById('ngrokSetupResult');
+            result.innerHTML = '<span style="color:var(--mc-gold);">⏳ 正在配置...</span>';
+            socket.emit('tunnel-setup-ngrok', { token });
+        }
+
+        socket.on('tunnel-setup-result', (data) => {
+            const result = document.getElementById('ngrokSetupResult');
+            if (data.success) {
+                result.innerHTML = '<span style="color:var(--online);">✅ ' + data.message + '</span>';
+                document.getElementById('tunnelNeedToken').style.display = 'none';
+                document.getElementById('tunnelReady').style.display = 'block';
+                toast('✅ ngrok 配置成功！');
+            } else {
+                result.innerHTML = '<span style="color:var(--offline);">❌ ' + data.message + '</span>';
+            }
+        });
+
+        async function startTunnelMapping() {
+            try {
+            const port = parseInt(document.getElementById('tunnelPort').value) || 25565;
+            const btnStart = document.getElementById('btnTunnelStart');
+            const btnStop = document.getElementById('btnTunnelStop');
+            const resultDiv = document.getElementById('tunnelResult');
+
+            if (!btnStart || !btnStop || !resultDiv) {
+                console.error('❌ 隧道按钮未找到! btnStart:', !!btnStart, 'btnStop:', !!btnStop, 'resultDiv:', !!resultDiv);
+                toast('界面元素未加载，请刷新页面');
+                return;
+            }
+
+            console.log('🚀 启动隧道, 端口:', port, 'socket连接状态:', socket.connected);
+
+            btnStart.style.display = 'none';
+            btnStop.style.display = 'block';
+            btnStop.textContent = '⏳ 连接中...';
+            btnStop.disabled = true;
+            resultDiv.innerHTML = '<p style="color:var(--mc-gold);">⏳ 正在建立隧道（自动选择最优线路）...</p>';
+
+            socket.emit('tunnel-start', { port, protocol: 'tcp' });
+            console.log('📤 已发送 tunnel-start 事件');
+            } catch(e) {
+                console.error('❌ startTunnelMapping 异常:', e);
+                toast('界面错误: ' + e.message);
+            }
+        }
+
+        function stopTunnelMapping() {
+            const btnStop = document.getElementById('btnTunnelStop');
+            const resultDiv = document.getElementById('tunnelResult');
+
+            btnStop.textContent = '⏳ 停止中...';
+            btnStop.disabled = true;
+            resultDiv.innerHTML = '<p style="color:var(--mc-gold);">⏳ 正在停止隧道...</p>';
+
+            socket.emit('tunnel-stop');
+        }
+
+        // 检测结果（checkTunnelReady）
+        socket.on('tunnel-check-result', (data) => {
+            const badge = document.getElementById('tunnelBackendBadge');
+            // 隐藏所有状态
+            document.getElementById('tunnelNotReady').style.display = 'none';
+            document.getElementById('tunnelNeedToken').style.display = 'none';
+            document.getElementById('tunnelReady').style.display = 'none';
+
+            if (!data.ready) {
+                // 完全不可用
+                document.getElementById('tunnelNotReady').style.display = 'block';
+                badge.textContent = '不可用';
+                badge.style.background = 'rgba(248,81,73,0.2)';
+                badge.style.color = 'var(--offline)';
+                document.getElementById('tunnelNotReadyMsg').textContent = data.detail;
+            } else if (data.backend === 'ngrok-download' || data.backend === 'ngrok-need-auth') {
+                // ngrok 装了但需要配置 token — 显示 token 输入框
+                document.getElementById('tunnelNeedToken').style.display = 'block';
+                document.getElementById('tunnelReady').style.display = 'block'; // 按钮也显示，pinggy 可用
+                document.getElementById('tunnelStatusBar').style.display = 'block';
+                badge.textContent = 'ngrok 待配置';
+                badge.style.background = 'rgba(58,127,217,0.2)';
+                badge.style.color = 'var(--mc-water)';
+                document.getElementById('tunnelStatusBar').innerHTML = `💡 ${data.detail}`;
+            } else {
+                // 可用 — ngrok 配好 或 pinggy
+                document.getElementById('tunnelReady').style.display = 'block';
+                document.getElementById('tunnelStatusBar').style.display = 'block';
+                const backendLabel = data.backend === 'ngrok' ? 'ngrok (固定地址)' : data.backend === 'pinggy.io' ? 'SSH 隧道 (60min)' : data.backend;
+                badge.textContent = backendLabel;
+                badge.style.background = 'rgba(63,185,80,0.2)';
+                badge.style.color = 'var(--online)';
+                document.getElementById('tunnelStatusBar').innerHTML = `✅ ${data.detail}`;
+            }
+        });
+
+        // 隧道启动结果
+        socket.on('tunnel-start-result', (data) => {
+            const btnStart = document.getElementById('btnTunnelStart');
+            const btnStop = document.getElementById('btnTunnelStop');
+            const resultDiv = document.getElementById('tunnelResult');
+            const statusBar = document.getElementById('tunnelStatusBar');
+            const badge = document.getElementById('tunnelBackendBadge');
+
+            btnStop.disabled = false;
+
+            if (data.success) {
+                tunnelRunning = true;
+                btnStart.style.display = 'none';
+                btnStop.style.display = 'block';
+                btnStop.textContent = '⏹ 停止';
+
+                const addr = data.public_url.replace(/^tcp:\/\//, '');
+                const displayAddr = addr || data.public_url;
+                const backend = data.backend || 'unknown';
+
+                // 更新徽章
+                badge.textContent = backend;
+                badge.style.background = 'rgba(63,185,80,0.2)';
+                badge.style.color = 'var(--online)';
+
+                resultDiv.innerHTML = `
+                    <div class="upnp-result success">
+                        <h4 style="color:var(--online);margin-bottom:8px;">✅ 隧道已建立! (${backend})</h4>
+                        <p style="color:var(--text2);font-size:13px;">你的 Minecraft 公网地址：</p>
+                        <div class="big-address" onclick="copyUpnpAddr(this)" title="点击复制">
+                            ${displayAddr}
+                        </div>
+                        <p class="copy-hint">👆 点击地址复制，发给你的朋友！</p>
+                        <p style="color:var(--text2);font-size:12px;margin-top:8px;">
+                            📍 映射: ${displayAddr} → localhost:${data.local_port}<br>
+                            🌐 后端: ${backend}<br>
+                            💡 朋友在 Minecraft 多人游戏 → 直接连接 → 粘贴上面的地址
+                        </p>
+                    </div>`;
+                statusBar.innerHTML = `🟢 隧道运行中 (${backend}) → ${displayAddr} | ⏱ 剩余 ~60 分钟`;
+                statusBar.style.color = 'var(--online)';
+                statusBar.style.display = 'block';
+
+                // 启动倒计时刷新
+                startCountdownRefresh();
+
+                navigator.clipboard.writeText(displayAddr).then(() => {
+                    toast(`✅ 地址已复制: ${displayAddr}`);
+                });
+            } else {
+                tunnelRunning = false;
+                stopCountdownRefresh();
+                btnStart.style.display = 'block';
+                btnStop.style.display = 'none';
+
+                let detailHtml = data.detail ? `<pre style="font-size:11px;color:var(--text2);margin-top:8px;white-space:pre-wrap;line-height:1.5;background:rgba(0,0,0,0.2);padding:10px;border-radius:6px;">${data.detail}</pre>` : '';
+
+                resultDiv.innerHTML = `
+                    <div class="upnp-result error">
+                        <h4 style="color:var(--offline);margin-bottom:8px;">❌ 隧道启动失败</h4>
+                        <p style="color:var(--text2);">${data.message}</p>
+                        ${detailHtml}
+                        <div style="margin-top:10px;display:flex;gap:8px;">
+                            <button class="btn btn-bg btn-sm" onclick="startTunnelMapping()">🔄 重试</button>
+                            <button class="btn btn-bg btn-sm" onclick="socket.emit('tunnel-check')">🔍 重新检测</button>
+                        </div>
+                    </div>`;
+                statusBar.innerHTML = '🔴 隧道未运行';
+                statusBar.style.color = 'var(--offline)';
+            }
+        });
+
+        // 隧道停止
+        socket.on('tunnel-stop-result', (data) => {
+            const btnStart = document.getElementById('btnTunnelStart');
+            const btnStop = document.getElementById('btnTunnelStop');
+            const resultDiv = document.getElementById('tunnelResult');
+            const statusBar = document.getElementById('tunnelStatusBar');
+
+            tunnelRunning = false;
+            stopCountdownRefresh();
+            btnStart.style.display = 'block';
+            btnStop.style.display = 'none';
+            resultDiv.innerHTML = '';
+            statusBar.innerHTML = '⚪ 隧道已停止';
+            statusBar.style.color = 'var(--text2)';
+            toast(data.message || '隧道已停止');
+        });
+
+        // 隧道状态更新
+        socket.on('tunnel-status', (data) => {
+            const statusBar = document.getElementById('tunnelStatusBar');
+            statusBar.style.display = 'block';
+            statusBar.innerHTML = `⏳ ${data.message}`;
+            statusBar.style.color = 'var(--mc-gold)';
+        });
+
+        // ========== 倒计时 & 自动续期 ==========
+        let countdownInterval = null;
+
+        function startCountdownRefresh() {
+            stopCountdownRefresh();
+            countdownInterval = setInterval(() => {
+                if (tunnelRunning) socket.emit('tunnel-status-query');
+            }, 30000); // 每30秒查询一次剩余时间
+        }
+
+        function stopCountdownRefresh() {
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+        }
+
+        // 续期结果
+        socket.on('tunnel-renewed', (data) => {
+            const statusBar = document.getElementById('tunnelStatusBar');
+            const resultDiv = document.getElementById('tunnelResult');
+
+            if (data.newAddress) {
+                const addr = data.newAddress.replace(/^tcp:\/\//, '');
+                statusBar.innerHTML = `🟢 已自动续期! (${data.backend}) → ${addr} | ⏱ 剩余 ~60 分钟`;
+                statusBar.style.color = 'var(--online)';
+
+                // 更新结果卡片中的地址
+                const bigAddr = resultDiv.querySelector('.big-address');
+                if (bigAddr) bigAddr.textContent = addr;
+
+                navigator.clipboard.writeText(addr).then(() => {
+                    toast(`🔄 隧道已自动续期! 新地址: ${addr}`);
+                });
+            } else {
+                statusBar.innerHTML = `⚠️ 自动续期失败: ${data.error || '未知错误'}`;
+                statusBar.style.color = 'var(--mc-gold)';
+                toast('⚠️ 隧道续期失败，请手动重新启动');
+                stopCountdownRefresh();
+            }
+        });
+
+        // 隧道状态更新（含剩余时间）
+        socket.on('tunnel-status-result', (data) => {
+            if (!data.running || !tunnelRunning) return;
+            const statusBar = document.getElementById('tunnelStatusBar');
+            const mins = data.remainingMinutes || 0;
+            if (mins > 0 && mins <= 10) {
+                statusBar.style.color = 'var(--mc-gold)';
+                statusBar.innerHTML = statusBar.innerHTML.replace(/剩余.*分钟/, `剩余 ~${mins} 分钟`);
+            }
+        });
+
+        // 初始化检测
+        setTimeout(() => checkTunnelInstall(), 300);
+
+        // ========== 网络信息 ==========
+        function loadNetworkInfo() {
+            socket.emit('mc-network-info');
+        }
+
+        socket.on('mc-network-info-result', (data) => {
+            const container = document.getElementById('networkInfo');
+            if (!data.ips || data.ips.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><p>未检测到网络接口</p></div>';
+                return;
+            }
+
+            container.innerHTML = data.ips.map(ip => `
+                <div class="info-card">
+                    <div class="iface-name">
+                        ${ip.internal ? '🏠' : '🌐'} ${ip.name}
+                        <span class="tag ${ip.internal ? 'tag-local' : 'tag-public'}">
+                            ${ip.internal ? '内网' : '公网'}
+                        </span>
+                    </div>
+                    <div class="ip-line">
+                        <span>IP:</span>
+                        <code style="color:#fff;">${ip.address}</code>
+                    </div>
+                    ${ip.netmask ? `<div class="ip-line"><span>掩码:</span><code>${ip.netmask}</code></div>` : ''}
+                </div>
+            `).join('');
+
+            // 额外提示最好的内网地址
+            const publicIP = data.ips.find(ip => !ip.internal);
+            const privateIP = data.ips.find(ip => ip.internal && ip.address.startsWith('192.168'));
+            const bestIP = publicIP || privateIP || data.ips[0];
+
+            if (bestIP) {
+                container.insertAdjacentHTML('beforeend', `
+                    <div class="info-card" style="border-color:var(--mc-green);">
+                        <div class="iface-name" style="color:var(--mc-green-bright);">⭐ 推荐联机地址</div>
+                        <div style="font-family:'Consolas',monospace;font-size:16px;color:var(--mc-green-bright);margin-top:4px;">
+                            ${bestIP.address}:25565
+                        </div>
+                        <p style="font-size:11px;color:var(--text2);margin-top:4px;">
+                            你的朋友可以通过这个地址连接你的 Minecraft 服务器（需在同一网络或配置端口映射）
+                        </p>
+                    </div>
+                `);
+            }
+        });
+
+        // ========== 来自服务器的"一键加入"结果 ==========
+        socket.on('mc-launch-result', (data) => {
+            if (data.serverInfo) {
+                toast(`✅ 服务器在线! 版本: ${data.serverInfo.version.name}, 玩家: ${data.serverInfo.players.online}/${data.serverInfo.players.max}`);
+            } else {
+                toast(`⚠️ ${data.message}`);
+            }
+        });
+
+        // ========== Toast ==========
+        function toast(msg) {
+            const existing = document.querySelector('.toast');
+            if (existing) existing.remove();
+
+            const div = document.createElement('div');
+            div.className = 'toast';
+            div.textContent = msg;
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), 3000);
+        }
+
+        // ========== 工具函数 ==========
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ========== 键盘快捷键 ==========
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'n') {
+                e.preventDefault();
+                if (currentView === 'servers') showAddDialog();
+            }
+            if (e.ctrlKey && e.key === 'r') {
+                e.preventDefault();
+                if (currentView === 'servers') refreshAllServers();
+            }
+            if (e.ctrlKey && e.key === '1') document.querySelector('[data-view="servers"]').click();
+            if (e.ctrlKey && e.key === '2') document.querySelector('[data-view="lan"]').click();
+            if (e.ctrlKey && e.key === '3') document.querySelector('[data-view="upnp"]').click();
+            if (e.ctrlKey && e.key === '4') document.querySelector('[data-view="network"]').click();
+        });
+
+        // ========== 初始化 ==========
+        loadServers();
+        renderServerList();
+
+        // 如果有预设服务器，自动刷新
+        if (serverList.length > 0) {
+            setTimeout(() => refreshAllServers(), 500);
+        }
+
+        // Socket 连接状态
+        socket.on('connect', () => {
+            console.log('🟢 已连接到联机服务');
+        });
+        socket.on('disconnect', () => {
+            console.log('🔴 联机服务已断开');
+            toast('⚠️ 服务连接已断开，请刷新页面');
+        });
+
+        console.log('⛏️  Minecraft 联机大厅已就绪');
+        console.log('💡 快捷键: Ctrl+N 添加服务器 | Ctrl+R 刷新 | Ctrl+1-4 切换视图');
+    </script>
+</body>
+</html>
