@@ -322,7 +322,7 @@ function tryPort(port) {
 
 tryPort(PORT).then((actualPort) => {
     console.log('╔══════════════════════════════════════════╗');
-    console.log('║     🎮 Minecraft 联机大厅已启动          ║');
+    console.log('║     🎮 MCLJ 已启动                       ║');
     console.log(`║     地址: http://localhost:${actualPort}       ║`);
     console.log('║     服务器 Ping | LAN扫描 | UPnP | 隧道  ║');
     console.log('╚══════════════════════════════════════════╝');

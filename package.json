@@ -1,7 +1,7 @@
 {
   "name": "mc-lobby",
   "version": "1.0.0",
-  "description": "Minecraft 联机大厅 - 桌面应用",
+  "description": "MCLJ - Minecraft 联机工具",
   "main": "electron-main.js",
   "scripts": {
     "start": "electron .",
@@ -12,7 +12,7 @@
   },
   "build": {
     "appId": "com.mc-lobby.app",
-    "productName": "Minecraft 联机大厅",
+    "productName": "MCLJ",
     "directories": {
       "output": "dist"
     },

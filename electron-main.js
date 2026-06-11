@@ -1,5 +1,5 @@
 /**
- * Minecraft 联机大厅 — Electron 桌面应用主进程
+ * MCLJ — Minecraft 联机工具
  */
 
 const { app, BrowserWindow, shell, dialog } = require('electron');
@@ -34,7 +34,7 @@ function startServer() {
                 actualPort = parseInt(portMatch[1]);
             }
 
-            if (!started && text.includes('联机大厅已启动')) {
+            if (!started && text.includes('MCLJ 已启动')) {
                 started = true;
                 resolve(actualPort || START_PORT);
             }
@@ -67,7 +67,7 @@ function createWindow(port) {
         height: 800,
         minWidth: 900,
         minHeight: 650,
-        title: 'Minecraft 联机大厅',
+        title: 'MCLJ',
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true
