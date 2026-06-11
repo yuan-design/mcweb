@@ -327,7 +327,10 @@ tryPort(PORT).then((actualPort) => {
     console.log('║     服务器 Ping | LAN扫描 | UPnP | 隧道  ║');
     console.log('╚══════════════════════════════════════════╝');
     if (process.env.ELECTRON) {
-        try { require('fs').writeFileSync(path.join(__dirname, '.port'), String(actualPort)); } catch(e) {}
+        try {
+            const portFile = process.env.ELECTRON_PORT_FILE || path.join(__dirname, '.port');
+            require('fs').writeFileSync(portFile, String(actualPort));
+        } catch(e) { console.error('写入端口文件失败:', e.message); }
     } else {
         openBrowser(`http://localhost:${actualPort}/minecraft`);
     }

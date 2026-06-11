@@ -8,10 +8,14 @@ const fs = require('fs');
 
 let mainWindow = null;
 
-// 设置 ELECTRON 标记，server.js 检测到后不会打开浏览器
-process.env.ELECTRON = 'true';
+// 用可写目录存端口文件
+const portFile = path.join(app.getPath('userData'), '.port');
 
-// 直接加载服务器（不 spawn 子进程，避免打包后死循环）
+// 设置 ELECTRON 标记和端口文件路径
+process.env.ELECTRON = 'true';
+process.env.ELECTRON_PORT_FILE = portFile;
+
+// 直接加载服务器
 require('./server.js');
 
 function createWindow(port) {
@@ -31,6 +35,20 @@ function createWindow(port) {
 
     mainWindow.loadURL(`http://localhost:${port}/minecraft`);
 
+    // 页面加载失败时重试
+    let retries = 0;
+    mainWindow.webContents.on('did-fail-load', () => {
+        if (retries < 5) {
+            retries++;
+            console.log(`加载失败，1秒后重试 (${retries}/5)...`);
+            setTimeout(() => {
+                if (mainWindow) {
+                    mainWindow.loadURL(`http://localhost:${port}/minecraft`);
+                }
+            }, 1000);
+        }
+    });
+
     mainWindow.once('ready-to-show', () => {
         mainWindow.show();
     });
@@ -46,20 +64,27 @@ function createWindow(port) {
 }
 
 app.whenReady().then(() => {
-    // 服务已通过 require('./server.js') 启动
-    // 给服务器一点启动时间，然后打开窗口
-    function getServerPort() {
-    try {
-        const port = fs.readFileSync(path.join(__dirname, '.port'), 'utf-8').trim();
-        return parseInt(port) || 3000;
-    } catch(e) { return 3000; }
-}
+    function getPort() {
+        try {
+            const p = fs.readFileSync(portFile, 'utf-8').trim();
+            return parseInt(p) || 3000;
+        } catch(e) { return 3000; }
+    }
 
-setTimeout(() => {
-    const port = getServerPort();
-    console.log(`服务器端口: ${port}`);
-    createWindow(port);
-}, 2000);
+    // 等待服务器启动，最多等 5 秒
+    let waited = 0;
+    const check = () => {
+        const port = getPort();
+        if (port !== 3000 || waited >= 5000) {
+            // 读到端口或超时，打开窗口
+            console.log(`[Electron] 服务器端口: ${port} (等待 ${waited}ms)`);
+            createWindow(port);
+        } else {
+            waited += 500;
+            setTimeout(check, 500);
+        }
+    };
+    setTimeout(check, 500);
 });
 
 app.on('window-all-closed', () => {
