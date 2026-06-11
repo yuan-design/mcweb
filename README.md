@@ -2,6 +2,12 @@
 
 图形化端口远程连接工具，支持 **TCP / UDP / HTTP** 协议调试，内置 **Minecraft 联机大厅** 和 **智能隧道穿透**。
 
+## 📥 下载
+
+👉 **[最新版下载](https://github.com/yuan-design/mcweb/releases/latest)**
+
+下载 `端口远程连接工具.exe`，双击即可运行，无需安装 Node.js。
+
 ## ✨ 功能
 
 ### 网络调试
