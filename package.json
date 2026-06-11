@@ -19,7 +19,7 @@
     "files": [
       "electron-main.js",
       "server.js",
-      "lib/**/*",
+      "lib/**/*.js",
       "public/**/*",
       "node_modules/**/*"
     ],
