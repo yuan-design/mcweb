@@ -26,5 +26,8 @@ port-connector/
 # Windows 保留设备名
 NUL
 
+# Electron 运行时文件
+.port
+
 # Claude
 .claude/
