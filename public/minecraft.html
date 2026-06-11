@@ -588,9 +588,10 @@
                         ② 输入你想要的域名 → 点 add domain<br>
                         ③ 复制页面上显示的 token → 填入下方：
                     </p>
-                    <div style="display:flex;gap:8px;">
+                    <div style="display:flex;gap:8px;margin-bottom:8px;">
                         <input class="input input-sm" type="text" id="ddnsDomain" placeholder="域名（如 mymc）" style="flex:1;">
                         <input class="input input-sm" type="text" id="ddnsToken" placeholder="粘贴 token" style="flex:2;font-family:Consolas,monospace;">
+                        <input class="input input-sm" type="number" id="ddnsPort" value="25565" min="1" max="65535" style="max-width:90px;" placeholder="端口">
                         <button class="btn btn-primary btn-sm" onclick="setupDDNS()" style="white-space:nowrap;">🔗 一键绑定</button>
                     </div>
                     <div id="ddnsMsg" style="margin-top:8px;font-size:12px;"></div>
@@ -1036,6 +1037,10 @@
         }
 
         // ========== DDNS 动态域名 ==========
+        function getDDNSPort() {
+            const el = document.getElementById('ddnsPort');
+            return parseInt(el?.value) || 25565;
+        }
         function loadDDNSStatus() { socket.emit('ddns-status'); }
 
         function setupDDNS() {
@@ -1053,11 +1058,11 @@
                 msg.innerHTML = '';
                 document.getElementById('ddnsSetup').style.display = 'none';
                 document.getElementById('ddnsReady').style.display = 'block';
-                document.getElementById('ddnsDomainDisplay').textContent = data.domain + ':25565';
+                document.getElementById('ddnsDomainDisplay').textContent = data.domain + ':' + getDDNSPort();
                 document.getElementById('ddnsStatusBadge').textContent = '已绑定 ✅';
                 document.getElementById('ddnsStatusBadge').style.background = 'rgba(76,175,80,0.2)';
                 document.getElementById('ddnsStatusBadge').style.color = 'var(--online)';
-                toast('✅ 域名已绑定: ' + data.domain);
+                toast('✅ 域名已绑定: ' + data.domain + ':' + getDDNSPort());
                 socket.emit('ddns-update');
             } else {
                 msg.innerHTML = '<span style="color:var(--offline);">❌ ' + data.message + '</span>';
@@ -1068,7 +1073,7 @@
             if (data.enabled) {
                 document.getElementById('ddnsSetup').style.display = 'none';
                 document.getElementById('ddnsReady').style.display = 'block';
-                document.getElementById('ddnsDomainDisplay').textContent = data.domain + ':25565';
+                document.getElementById('ddnsDomainDisplay').textContent = data.domain + ':' + getDDNSPort();
                 document.getElementById('ddnsIP').textContent = data.lastIP || '-';
                 document.getElementById('ddnsLastUpdate').textContent = data.lastUpdate
                     ? new Date(data.lastUpdate).toLocaleTimeString('zh-CN')
@@ -1149,7 +1154,7 @@
                     <div class="info-card" style="border-color:var(--mc-green);">
                         <div class="iface-name" style="color:var(--mc-green-bright);">⭐ 推荐联机地址</div>
                         <div style="font-family:'Consolas',monospace;font-size:16px;color:var(--mc-green-bright);margin-top:4px;">
-                            ${bestIP.address}:25565
+                            ${bestIP.address}:${getDDNSPort()}
                         </div>
                         <p style="font-size:11px;color:var(--text2);margin-top:4px;">
                             你的朋友可以通过这个地址连接你的 Minecraft 服务器（需在同一网络或配置端口映射）
