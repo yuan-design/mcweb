@@ -188,7 +188,7 @@ app.on('before-quit', async (event) => {
 
     // 强制杀掉可能残留的子进程
     try {
-        require('child_process').execSync('taskkill /F /IM ssh.exe /T 2>nul & taskkill /F /IM plink.exe /T 2>nul & taskkill /F /IM ngrok.exe /T 2>nul', { stdio: 'ignore' });
+        require('child_process').execSync('taskkill /F /IM ssh.exe /T 2>nul & taskkill /F /IM ngrok.exe /T 2>nul', { stdio: 'ignore' });
     } catch (e) { /* ignore */ }
 
     app.exit(0);
