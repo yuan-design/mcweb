@@ -1,40 +1,95 @@
 /**
- * MCLJ — Minecraft 联机工具
+ * MCLJ
  */
 
 const { app, BrowserWindow, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
+let splashWindow = null;
 let mainWindow = null;
 
-// 用可写目录存端口文件
 const portFile = path.join(app.getPath('userData'), '.port');
-
-// 设置 ELECTRON 标记
 process.env.ELECTRON = 'true';
 process.env.ELECTRON_PORT_FILE = portFile;
 
-// 加载服务器（异步，不阻塞窗口显示）
+// 启动服务器
 require('./server.js');
 
-// 加载中页面
-const LOADING_HTML = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><style>
-body{background:#0d0d0d;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;
-font-family:'Microsoft YaHei',sans-serif;color:#888;}
-.box{text-align:center}
-.spinner{width:40px;height:40px;border:3px solid #333;border-top:3px solid #5d8c3c;border-radius:50%;
-animation:spin 0.8s linear infinite;margin:0 auto 16px;}
-@keyframes spin{to{transform:rotate(360deg)}}
-h2{color:#fff;font-size:18px;margin:0 0 4px 0}
-p{font-size:13px;margin:0}
-</style></head><body><div class="box">
-<div class="spinner"></div>
-<h2>MCLJ</h2><p>正在启动...</p>
-</div></body></html>`;
+// ========== 启动画面 ==========
 
-function createWindow(port) {
+const SPLASH_HTML = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d0d0d;display:flex;align-items:center;justify-content:center;height:100vh;
+font-family:'Microsoft YaHei',sans-serif;overflow:hidden;user-select:none;-webkit-app-region:drag}
+.box{text-align:center;width:320px}
+.logo{
+    width:80px;height:80px;margin:0 auto 20px;
+    background:linear-gradient(135deg,#5d8c3c,#3a7d3a);
+    border-radius:18px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:40px;
+    box-shadow:0 0 40px rgba(93,140,60,0.3);
+    animation:bounce 2s ease-in-out infinite;
+}
+@keyframes bounce{
+    0%,100%{transform:translateY(0)}
+    50%{transform:translateY(-8px)}
+}
+h1{font-size:32px;font-weight:900;color:#fff;letter-spacing:4px;margin-bottom:4px}
+h1 span{color:#5d8c3c}
+.ver{font-size:11px;color:#555;margin-bottom:24px}
+.bar-track{
+    width:100%;height:4px;background:#1a1a1a;border-radius:2px;overflow:hidden;margin-bottom:12px
+}
+.bar-fill{
+    width:0%;height:100%;background:linear-gradient(90deg,#5d8c3c,#7ec850);
+    border-radius:2px;transition:width 0.3s;
+    animation:progress 3s ease-in-out infinite;
+}
+@keyframes progress{
+    0%{width:0%}
+    30%{width:40%}
+    60%{width:65%}
+    85%{width:85%}
+    100%{width:90%}
+}
+.status{font-size:12px;color:#666;transition:color 0.5s}
+.status.done{color:#5d8c3c}
+</style></head><body><div class="box">
+<div class="logo">⛏</div>
+<h1>M<span>CLJ</span></h1>
+<div class="ver">v1.0.0</div>
+<div class="bar-track"><div class="bar-fill" id="bar"></div></div>
+<div class="status" id="status">正在初始化...</div>
+</div>
+<script>
+var steps=['初始化引擎...','加载网络模块...','启动本地服务...','准备就绪 ✓'];
+var i=0,bar=document.getElementById('bar'),st=document.getElementById('status');
+function next(){if(i<steps.length){st.textContent=steps[i];if(i===steps.length-1){st.className='status done';bar.style.width='100%';bar.style.animation='none'}i++;if(i<steps.length)setTimeout(next,400+Math.random()*300)}}
+setTimeout(next,200);
+</script></body></html>`;
+
+function createSplash() {
+    splashWindow = new BrowserWindow({
+        width: 420,
+        height: 380,
+        frame: false,
+        transparent: false,
+        resizable: false,
+        alwaysOnTop: true,
+        center: true,
+        backgroundColor: '#0d0d0d',
+        webPreferences: { nodeIntegration: false, contextIsolation: true },
+        show: true
+    });
+    splashWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(SPLASH_HTML)}`);
+}
+
+// ========== 主窗口 ==========
+
+function createMainWindow(port) {
     mainWindow = new BrowserWindow({
         width: 1200,
         height: 800,
@@ -43,31 +98,19 @@ function createWindow(port) {
         title: 'MCLJ',
         webPreferences: { nodeIntegration: false, contextIsolation: true },
         backgroundColor: '#0d0d0d',
-        show: true  // ← 立即显示
+        show: false
     });
 
-    // 先显示加载页
-    mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(LOADING_HTML)}`);
+    mainWindow.loadURL(`http://localhost:${port}/minecraft`);
 
-    // 等待服务器就绪
-    function tryLoad(retries = 0) {
-        const http = require('http');
-        const req = http.get(`http://localhost:${port}/minecraft`, (res) => {
-            if (res.statusCode === 200) {
-                // 服务器就绪，加载真实页面
-                mainWindow.loadURL(`http://localhost:${port}/minecraft`);
-            } else if (retries < 20) {
-                setTimeout(() => tryLoad(retries + 1), 200);
-            }
-        });
-        req.on('error', () => {
-            if (retries < 20) setTimeout(() => tryLoad(retries + 1), 200);
-            else mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent('<!DOCTYPE html><html><body style="background:#0d0d0d;color:#e74c3c;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;"><div><h2>启动失败</h2><p>请重新打开程序</p></div></body></html>')}`);
-        });
-        req.setTimeout(1000, () => req.destroy());
-    }
-
-    setTimeout(() => tryLoad(), 100);
+    mainWindow.once('ready-to-show', () => {
+        mainWindow.show();
+        // 关闭启动画面
+        if (splashWindow && !splashWindow.isDestroyed()) {
+            splashWindow.close();
+            splashWindow = null;
+        }
+    });
 
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
         shell.openExternal(url);
@@ -77,24 +120,41 @@ function createWindow(port) {
     mainWindow.on('closed', () => { mainWindow = null; });
 }
 
+// ========== 启动流程 ==========
+
 app.whenReady().then(() => {
+    // 1. 立即显示启动画面
+    createSplash();
+
+    // 2. 等待服务器就绪
     function getPort() {
         try { return parseInt(fs.readFileSync(portFile, 'utf-8').trim()) || 3000; }
-        catch(e) { return 3000; }
+        catch(e) { return 0; }
     }
 
-    // 快速轮询端口
+    // 轮询端口，最多等 8 秒
     let waited = 0;
-    const check = () => {
+    function checkPort() {
         const port = getPort();
-        if (port !== 3000 || waited >= 5000) {
-            createWindow(port || 3000);
+        if (port > 0) {
+            // 额外确认服务器真的在响应
+            const http = require('http');
+            const req = http.get(`http://localhost:${port}/minecraft`, (res) => {
+                createMainWindow(port);
+            });
+            req.on('error', () => {
+                if (waited < 8000) { waited += 150; setTimeout(checkPort, 150); }
+                else createMainWindow(port); // 超时也打开
+            });
+            req.setTimeout(1000, () => req.destroy());
+        } else if (waited < 8000) {
+            waited += 150;
+            setTimeout(checkPort, 150);
         } else {
-            waited += 200;
-            setTimeout(check, 200);
+            createMainWindow(3000); // 超时默认端口
         }
-    };
-    setTimeout(check, 200);
+    }
+    setTimeout(checkPort, 300);
 });
 
 app.on('window-all-closed', () => { app.quit(); });
