@@ -50,6 +50,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
 }));
 app.get('/', (req, res) => res.redirect('/minecraft'));
 app.get('/minecraft', (req, res) => sendHtml(res, 'minecraft.html'));
+app.get('/tunnel', (req, res) => sendHtml(res, 'tunnel.html'));
 
 function sendHtml(res, filename) {
     const fs = require('fs');

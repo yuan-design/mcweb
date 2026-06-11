@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>隧道穿透管理</title>
+    <style>
+        :root {
+            --bg: #0d0d0d;
+            --bg2: #1a1a1a;
+            --bg3: #242424;
+            --border: #333;
+            --text: #d4d4d4;
+            --text2: #888;
+            --accent: #7c3aed;
+            --accent2: #a78bfa;
+            --online: #4caf50;
+            --offline: #e74c3c;
+            --warn: #f5a623;
+            --radius: 10px;
+            --font: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            background-image:
+                radial-gradient(ellipse at 50% 0%, rgba(124,58,237,0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 100%, rgba(167,139,250,0.04) 0%, transparent 50%);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px 60px;
+        }
+
+        /* ======== 头部 ======== */
+        .header {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+        .header .icon {
+            font-size: 48px;
+            margin-bottom: 8px;
+        }
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #fff;
+        }
+        .header h1 span { color: var(--accent2); }
+        .header p {
+            font-size: 13px;
+            color: var(--text2);
+            margin-top: 4px;
+        }
+
+        /* ======== 主容器 ======== */
+        .container {
+            width: 100%;
+            max-width: 520px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* ======== 卡片 ======== */
+        .card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+        }
+        .card-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ======== 控件 ======== */
+        .input {
+            padding: 10px 14px;
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 14px;
+            font-family: var(--font);
+            outline: none;
+            width: 100%;
+            transition: border 0.2s;
+        }
+        .input:focus { border-color: var(--accent); }
+        .input-row {
+            display: flex;
+            gap: 8px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: var(--font);
+            transition: all 0.2s;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            justify-content: center;
+        }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover { background: #8b5cf6; box-shadow: 0 0 16px rgba(124,58,237,0.3); }
+        .btn-start { background: var(--online); color: #fff; }
+        .btn-start:hover { background: #43a047; box-shadow: 0 0 16px rgba(76,175,80,0.3); }
+        .btn-stop { background: var(--offline); color: #fff; }
+        .btn-stop:hover { background: #d32f2f; box-shadow: 0 0 16px rgba(231,76,60,0.3); }
+        .btn-sm { padding: 6px 14px; font-size: 12px; border-radius: 4px; }
+        .btn-bg { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+        .btn-bg:hover { background: #333; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ======== 状态徽章 ======== */
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .badge-running { background: rgba(76,175,80,0.15); color: var(--online); }
+        .badge-stopped { background: rgba(136,136,136,0.15); color: var(--text2); }
+        .badge-error { background: rgba(231,76,60,0.15); color: var(--offline); }
+        .badge-connecting { background: rgba(245,166,35,0.15); color: var(--warn); }
+
+        /* ======== 地址展示 ======== */
+        .address-box {
+            background: rgba(0,0,0,0.3);
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s;
+            position: relative;
+        }
+        .address-box:hover { border-color: var(--accent); }
+        .address-box.active { border-color: var(--online); border-style: solid; }
+        .address-text {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent2);
+            word-break: break-all;
+        }
+        .address-text.active { color: var(--online); }
+        .address-label {
+            font-size: 11px;
+            color: var(--text2);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        /* ======== 二维码 ======== */
+        .qr-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .qr-canvas {
+            background: #fff;
+            padding: 8px;
+            border-radius: 8px;
+        }
+        .qr-info {
+            flex: 1;
+            min-width: 180px;
+        }
+        .qr-info p {
+            font-size: 13px;
+            color: var(--text2);
+            line-height: 1.8;
+        }
+
+        /* ======== 状态栏 ======== */
+        .status-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: var(--bg3);
+            border-radius: 6px;
+            font-size: 13px;
+        }
+        .status-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+        .status-dot.running { background: var(--online); animation: pulse 1.5s infinite; }
+        .status-dot.stopped { background: var(--text2); }
+        .status-dot.error { background: var(--offline); }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+        /* ======== 历史记录 ======== */
+        .history-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .history-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+            transition: background 0.2s;
+        }
+        .history-item:hover { background: var(--bg3); }
+        .history-item:last-child { border-bottom: none; }
+        .history-addr {
+            font-family: 'Consolas', monospace;
+            color: var(--accent2);
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+        .history-time { color: var(--text2); white-space: nowrap; }
+        .history-backend {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 6px;
+            margin-right: 8px;
+            white-space: nowrap;
+        }
+        .empty-hint {
+            text-align: center;
+            padding: 20px;
+            color: var(--text2);
+            font-size: 13px;
+        }
+        .flex-between {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* ======== Toast ======== */
+        .toast {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+            background: var(--bg3); border: 1px solid var(--border);
+            color: #fff; padding: 10px 24px; border-radius: 20px;
+            font-size: 13px; z-index: 200;
+            animation: toastIn 0.3s ease, toastOut 0.3s ease 2.5s forwards;
+            pointer-events: none;
+        }
+        @keyframes toastIn { from { opacity:0; transform: translateX(-50%) translateY(20px); } }
+        @keyframes toastOut { to { opacity:0; transform: translateX(-50%) translateY(-10px); } }
+
+        /* ======== ngrok 配置区 ======== */
+        .setup-hint {
+            font-size: 12px;
+            color: var(--text2);
+            margin: 8px 0 12px;
+            line-height: 1.6;
+        }
+        .setup-hint a { color: var(--accent2); }
+
+        /* ======== 底部链接 ======== */
+        .footer-link {
+            margin-top: 32px;
+            text-align: center;
+        }
+        .footer-link a {
+            color: var(--text2);
+            text-decoration: none;
+            font-size: 13px;
+            transition: color 0.2s;
+        }
+        .footer-link a:hover { color: var(--accent2); }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background:#333; border-radius:2px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="icon">🚇</div>
+    <h1>隧道<span>穿透</span>管理</h1>
+    <p>ngrok / pinggy.io 智能双后端 · 内网穿透一键直达</p>
+</div>
+
+<div class="container">
+
+    <!-- ===== 隧道控制面板 ===== -->
+    <div class="card">
+        <div class="card-title">🔗 隧道控制</div>
+
+        <!-- 状态条 -->
+        <div class="status-bar" id="statusBar">
+            <span>
+                <span class="status-dot stopped" id="statusDot"></span>
+                <span id="statusText">未启动</span>
+            </span>
+            <span style="display:flex;align-items:center;gap:8px;">
+                <span class="badge badge-stopped" id="backendBadge">就绪等待</span>
+                <span id="countdownText" style="font-size:12px;color:var(--text2);"></span>
+            </span>
+        </div>
+
+        <!-- 端口输入 + 按钮 -->
+        <div class="input-row" style="margin-top:14px;">
+            <input class="input" type="number" id="tunnelPort" value="25565" min="1" max="65535" style="max-width:140px;" placeholder="端口号">
+            <button class="btn btn-start" id="btnStart" onclick="startTunnel()" style="flex:1;">
+                ▶ 启动隧道
+            </button>
+            <button class="btn btn-stop" id="btnStop" onclick="stopTunnel()" style="flex:1;display:none;">
+                ⏹ 停止隧道
+            </button>
+        </div>
+
+        <!-- 地址展示 -->
+        <div class="address-box" id="addressBox" onclick="copyAddress()" style="margin-top:14px;">
+            <div class="address-label">公网地址 · 点击复制</div>
+            <div class="address-text" id="addressText">等待隧道启动...</div>
+        </div>
+
+        <!-- 二维码 -->
+        <div class="qr-section" id="qrSection" style="display:none;margin-top:14px;"></div>
+    </div>
+
+    <!-- ===== ngrok 配置 ===== -->
+    <div class="card" id="ngrokSetupCard">
+        <div class="card-title">🔑 ngrok 配置 <span class="badge badge-stopped" id="ngrokStatusBadge">检测中...</span></div>
+        <p class="setup-hint">
+            配置 ngrok authtoken 后获得<strong style="color:var(--online);">固定不变的地址</strong>。<br>
+            👉 <a href="https://dashboard.ngrok.com/get-started/your-authtoken" target="_blank">点击获取免费 token</a>（注册只需30秒）
+        </p>
+        <div class="input-row">
+            <input class="input" type="text" id="ngrokTokenInput" placeholder="粘贴 ngrok authtoken" style="font-family:Consolas,monospace;flex:1;">
+            <button class="btn btn-primary btn-sm" onclick="setupNgrok()" style="white-space:nowrap;">🔑 一键配置</button>
+        </div>
+        <div id="ngrokMsg" style="margin-top:8px;font-size:12px;"></div>
+    </div>
+
+    <!-- ===== 历史记录 ===== -->
+    <div class="card">
+        <div class="flex-between" style="margin-bottom:12px;">
+            <div class="card-title" style="margin-bottom:0;">📋 连接记录</div>
+            <button class="btn btn-bg btn-sm" onclick="clearHistory()">🗑 清空</button>
+        </div>
+        <div class="history-list" id="historyList">
+            <div class="empty-hint">暂无记录，启动隧道后自动记录</div>
+        </div>
+    </div>
+
+</div>
+
+<div class="footer-link">
+    <a href="/minecraft">🎮 返回联机大厅</a>
+</div>
+
+<script src="/socket.io.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>
+    const socket = io();
+    let tunnelRunning = false;
+    let currentAddress = '';
+    let history = [];
+    let countdownTimer = null;
+    let currentBackend = '';
+
+    // ========== 初始化 ==========
+    loadHistory();
+    renderHistory();
+    checkTunnelStatus();
+    setTimeout(checkNgrokConfig, 300);
+
+    // ========== 隧道检测 ==========
+    function checkTunnelStatus() {
+        socket.emit('tunnel-check');
+    }
+
+    function checkNgrokConfig() {
+        socket.emit('tunnel-check');
+    }
+
+    socket.on('tunnel-check-result', (data) => {
+        const badge = document.getElementById('ngrokStatusBadge');
+        if (data.backend === 'ngrok') {
+            badge.textContent = '已配置 ✅';
+            badge.className = 'badge badge-running';
+            document.getElementById('ngrokSetupCard').style.opacity = '0.6';
+        } else if (data.backend === 'ngrok-need-auth') {
+            badge.textContent = '待配置 token';
+            badge.className = 'badge badge-connecting';
+        } else if (data.backend === 'pinggy.io') {
+            badge.textContent = 'pinggy 可用';
+            badge.className = 'badge badge-running';
+        } else {
+            badge.textContent = data.ready ? '就绪' : '不可用';
+            badge.className = data.ready ? 'badge badge-running' : 'badge badge-error';
+        }
+
+        // 更新后端徽章
+        if (!tunnelRunning) {
+            const bb = document.getElementById('backendBadge');
+            if (data.backend === 'ngrok') {
+                bb.textContent = 'ngrok';
+                bb.className = 'badge badge-running';
+            } else if (data.backend === 'pinggy.io') {
+                bb.textContent = 'pinggy';
+                bb.className = 'badge badge-running';
+            }
+        }
+    });
+
+    // ========== ngrok 配置 ==========
+    function setupNgrok() {
+        const token = document.getElementById('ngrokTokenInput').value.trim();
+        if (!token) { toast('请先粘贴 authtoken'); return; }
+        const msg = document.getElementById('ngrokMsg');
+        msg.innerHTML = '<span style="color:var(--warn);">⏳ 正在配置...</span>';
+        socket.emit('tunnel-setup-ngrok', { token });
+    }
+
+    socket.on('tunnel-setup-result', (data) => {
+        const msg = document.getElementById('ngrokMsg');
+        if (data.success) {
+            msg.innerHTML = '<span style="color:var(--online);">✅ ' + data.message + '</span>';
+            checkNgrokConfig();
+        } else {
+            msg.innerHTML = '<span style="color:var(--offline);">❌ ' + data.message + '</span>';
+        }
+    });
+
+    // ========== 启动隧道 ==========
+    function startTunnel() {
+        const port = parseInt(document.getElementById('tunnelPort').value) || 25565;
+        const btnStart = document.getElementById('btnStart');
+        const btnStop = document.getElementById('btnStop');
+
+        btnStart.style.display = 'none';
+        btnStop.style.display = 'flex';
+        btnStop.textContent = '⏳ 连接中...';
+        btnStop.disabled = true;
+
+        setStatus('connecting', '正在建立隧道...', 'badge-connecting');
+        document.getElementById('addressText').textContent = '连接中...';
+        document.getElementById('addressText').className = 'address-text';
+
+        socket.emit('tunnel-start', { port, protocol: 'tcp' });
+    }
+
+    // ========== 停止隧道 ==========
+    function stopTunnel() {
+        document.getElementById('btnStop').textContent = '⏳ 停止中...';
+        document.getElementById('btnStop').disabled = true;
+        socket.emit('tunnel-stop');
+    }
+
+    // ========== 启动结果 ==========
+    socket.on('tunnel-start-result', (data) => {
+        const btnStart = document.getElementById('btnStart');
+        const btnStop = document.getElementById('btnStop');
+        btnStop.disabled = false;
+
+        if (data.success) {
+            tunnelRunning = true;
+            currentBackend = data.backend || 'unknown';
+            btnStart.style.display = 'none';
+            btnStop.style.display = 'flex';
+            btnStop.textContent = '⏹ 停止';
+
+            const addr = (data.public_url || '').replace(/^tcp:\/\//, '');
+            currentAddress = addr;
+
+            setStatus('running', '隧道运行中', 'badge-running');
+            document.getElementById('backendBadge').textContent = currentBackend;
+            document.getElementById('backendBadge').className = 'badge badge-running';
+            document.getElementById('addressText').textContent = addr;
+            document.getElementById('addressText').className = 'address-text active';
+            document.getElementById('addressBox').className = 'address-box active';
+            document.getElementById('countdownText').textContent = '剩余 ~60 分钟';
+
+            // 二维码
+            showQR(addr);
+
+            // 记录历史
+            addHistory(addr, currentBackend, data.local_port);
+
+            // 倒计时
+            startCountdown();
+
+            try {
+                navigator.clipboard.writeText(addr);
+                toast('✅ 地址已复制: ' + addr);
+            } catch(e) {}
+        } else {
+            tunnelRunning = false;
+            btnStart.style.display = 'flex';
+            btnStop.style.display = 'none';
+            setStatus('error', '启动失败', 'badge-error');
+            document.getElementById('addressText').textContent = data.message || '启动失败';
+
+            let detail = data.detail ? `<p style="margin-top:8px;font-size:12px;white-space:pre-wrap;">${data.detail}</p>` : '';
+            toast('❌ ' + data.message);
+        }
+    });
+
+    // ========== 停止结果 ==========
+    socket.on('tunnel-stop-result', (data) => {
+        tunnelRunning = false;
+        currentAddress = '';
+        stopCountdown();
+        document.getElementById('btnStart').style.display = 'flex';
+        document.getElementById('btnStop').style.display = 'none';
+        document.getElementById('addressText').textContent = '等待隧道启动...';
+        document.getElementById('addressText').className = 'address-text';
+        document.getElementById('addressBox').className = 'address-box';
+        setStatus('stopped', '已停止', 'badge-stopped');
+        document.getElementById('backendBadge').className = 'badge badge-stopped';
+        document.getElementById('countdownText').textContent = '';
+        document.getElementById('qrSection').style.display = 'none';
+        toast(data.message || '隧道已停止');
+    });
+
+    // ========== 状态更新 ==========
+    socket.on('tunnel-status', (data) => {
+        setStatus('connecting', data.message, 'badge-connecting');
+    });
+
+    socket.on('tunnel-status-result', (data) => {
+        if (!data.running || !tunnelRunning) return;
+        const mins = data.remainingMinutes || 0;
+        const ct = document.getElementById('countdownText');
+        ct.textContent = `剩余 ~${mins} 分钟`;
+        if (mins > 0 && mins <= 10) ct.style.color = 'var(--warn)';
+        else ct.style.color = 'var(--text2)';
+    });
+
+    // ========== 续期通知 ==========
+    socket.on('tunnel-renewed', (data) => {
+        if (data.newAddress) {
+            const addr = data.newAddress.replace(/^tcp:\/\//, '');
+            currentAddress = addr;
+            document.getElementById('addressText').textContent = addr;
+            document.getElementById('countdownText').textContent = '剩余 ~60 分钟';
+            document.getElementById('countdownText').style.color = 'var(--text2)';
+            showQR(addr);
+            addHistory(addr, data.backend, currentAddress.split(':')[1] || '');
+            try { navigator.clipboard.writeText(addr); } catch(e) {}
+            toast('🔄 隧道已自动续期! 新地址: ' + addr);
+        } else {
+            toast('⚠️ 续期失败: ' + (data.error || '未知'));
+        }
+    });
+
+    // ========== 辅助功能 ==========
+    function setStatus(status, text, badgeClass) {
+        document.getElementById('statusText').textContent = text;
+        const dot = document.getElementById('statusDot');
+        dot.className = 'status-dot ' + status;
+        document.getElementById('backendBadge').className = 'badge ' + (badgeClass || 'badge-stopped');
+    }
+
+    function copyAddress() {
+        if (!currentAddress) return;
+        navigator.clipboard.writeText(currentAddress).then(() => {
+            toast('✅ 已复制: ' + currentAddress);
+        });
+    }
+
+    // ========== 二维码 ==========
+    function showQR(addr) {
+        const section = document.getElementById('qrSection');
+        const mcAddr = `minecraft://connect?host=${addr.split(':')[0]}&port=${addr.split(':')[1] || '25565'}`;
+
+        section.style.display = 'flex';
+        section.innerHTML = `
+            <div class="qr-canvas" id="qrCode"></div>
+            <div class="qr-info">
+                <p>📱 <strong style="color:#fff;">手机扫码直连</strong></p>
+                <p style="font-size:11px;">用手机相机扫二维码<br>可复制地址发给朋友</p>
+                <p style="font-size:11px;margin-top:4px;word-break:break-all;color:var(--accent2);">${addr}</p>
+            </div>
+        `;
+
+        try {
+            new QRCode(document.getElementById('qrCode'), {
+                text: mcAddr,
+                width: 100,
+                height: 100,
+                colorDark: '#000',
+                colorLight: '#fff'
+            });
+        } catch(e) {
+            document.getElementById('qrCode').innerHTML = '<p style="color:#000;font-size:10px;">QR库加载失败</p>';
+        }
+    }
+
+    // ========== 倒计时 ==========
+    function startCountdown() {
+        stopCountdown();
+        countdownTimer = setInterval(() => {
+            if (tunnelRunning) socket.emit('tunnel-status-query');
+        }, 30000);
+    }
+
+    function stopCountdown() {
+        if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+    }
+
+    // ========== 历史记录 ==========
+    function addHistory(addr, backend, port) {
+        history.unshift({
+            address: addr,
+            backend: backend,
+            port: port,
+            time: new Date().toISOString()
+        });
+        if (history.length > 50) history = history.slice(0, 50);
+        saveHistory();
+        renderHistory();
+    }
+
+    function saveHistory() {
+        try { localStorage.setItem('tunnel-history', JSON.stringify(history)); } catch(e) {}
+    }
+
+    function loadHistory() {
+        try {
+            const raw = localStorage.getItem('tunnel-history');
+            if (raw) history = JSON.parse(raw);
+        } catch(e) { history = []; }
+    }
+
+    function clearHistory() {
+        history = [];
+        saveHistory();
+        renderHistory();
+        toast('历史记录已清空');
+    }
+
+    function renderHistory() {
+        const container = document.getElementById('historyList');
+        if (history.length === 0) {
+            container.innerHTML = '<div class="empty-hint">暂无记录，启动隧道后自动记录</div>';
+            return;
+        }
+
+        container.innerHTML = history.map((h, i) => `
+            <div class="history-item">
+                <span class="history-backend" style="background:rgba(124,58,237,0.15);color:var(--accent2);">${h.backend || '?'}</span>
+                <span class="history-addr" onclick="copyHistoryAddr(${i})" title="点击复制">${h.address}</span>
+                <span class="history-time">${formatTime(h.time)}</span>
+            </div>
+        `).join('');
+    }
+
+    function copyHistoryAddr(index) {
+        const addr = history[index]?.address;
+        if (!addr) return;
+        navigator.clipboard.writeText(addr).then(() => toast('✅ 已复制: ' + addr));
+    }
+
+    function formatTime(iso) {
+        try {
+            const d = new Date(iso);
+            return d.toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+        } catch(e) { return ''; }
+    }
+
+    // ========== Toast ==========
+    function toast(msg) {
+        const existing = document.querySelector('.toast');
+        if (existing) existing.remove();
+        const div = document.createElement('div');
+        div.className = 'toast';
+        div.textContent = msg;
+        document.body.appendChild(div);
+        setTimeout(() => div.remove(), 3000);
+    }
+
+    // ========== Socket 状态 ==========
+    socket.on('connect', () => {
+        checkTunnelStatus();
+        setTimeout(checkNgrokConfig, 300);
+    });
+
+    socket.on('disconnect', () => toast('⚠️ 服务连接已断开'));
+</script>
+</body>
+</html>
