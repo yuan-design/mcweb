@@ -326,7 +326,9 @@ tryPort(PORT).then((actualPort) => {
     console.log(`║     地址: http://localhost:${actualPort}       ║`);
     console.log('║     服务器 Ping | LAN扫描 | UPnP | 隧道  ║');
     console.log('╚══════════════════════════════════════════╝');
-    openBrowser(`http://localhost:${actualPort}/minecraft`);
+    if (!process.env.ELECTRON) {
+        openBrowser(`http://localhost:${actualPort}/minecraft`);
+    }
 }).catch((err) => {
     console.error('❌ 无法启动服务器:', err.message);
     console.log('\n按 Enter 键退出...');

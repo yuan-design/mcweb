@@ -1,15 +1,32 @@
 {
-  "name": "port-connector",
+  "name": "mc-lobby",
   "version": "1.0.0",
-  "description": "图形化端口远程连接工具 - 支持 TCP/UDP/HTTP",
-  "main": "server.js",
-  "bin": "server.js",
+  "description": "Minecraft 联机大厅 - 桌面应用",
+  "main": "electron-main.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "electron .",
     "dev": "node server.js",
-    "build": "npm run clean-dist && pkg . --target node24-win-x64 --output dist/端口远程连接工具.exe",
-    "build-all": "npm run clean-dist && pkg . --target node24-win-x64,node24-linux-x64,node24-macos-x64 --output dist/port-connector",
+    "build": "npm run clean-dist && electron-builder --win portable",
+    "build-exe": "npm run clean-dist && pkg . --target node24-win-x64 --output dist/服务器.exe",
     "clean-dist": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true});require('fs').mkdirSync('dist',{recursive:true})\""
+  },
+  "build": {
+    "appId": "com.mc-lobby.app",
+    "productName": "Minecraft 联机大厅",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron-main.js",
+      "server.js",
+      "lib/**/*",
+      "public/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": "portable",
+      "icon": "public/icon.png"
+    }
   },
   "pkg": {
     "assets": [
@@ -28,6 +45,8 @@
   },
   "devDependencies": {
     "@yao-pkg/pkg": "^6.20.0",
+    "electron": "^42.4.0",
+    "electron-builder": "^26.15.2",
     "socket.io-client": "^4.8.3"
   }
 }
