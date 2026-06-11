@@ -327,7 +327,7 @@ tryPort(PORT).then((actualPort) => {
     console.log('║     服务器 Ping | LAN扫描 | UPnP | 隧道  ║');
     console.log('╚══════════════════════════════════════════╝');
     if (process.env.ELECTRON) {
-        try { fs.writeFileSync(path.join(__dirname, '.port'), String(actualPort)); } catch(e) {}
+        try { require('fs').writeFileSync(path.join(__dirname, '.port'), String(actualPort)); } catch(e) {}
     } else {
         openBrowser(`http://localhost:${actualPort}/minecraft`);
     }
