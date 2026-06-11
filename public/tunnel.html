@@ -152,6 +152,7 @@
         }
         .address-box:hover { border-color: var(--accent); }
         .address-box.active { border-color: var(--online); border-style: solid; }
+        .address-box.error { border-color: var(--offline); border-style: solid; }
         .address-text {
             font-family: 'Consolas', 'Courier New', monospace;
             font-size: 18px;
@@ -316,6 +317,7 @@
         <div class="address-box" id="addressBox" onclick="copyAddress()" style="margin-top:14px;">
             <div class="address-label">公网地址 · 点击复制</div>
             <div class="address-text" id="addressText">等待隧道启动...</div>
+            <div id="tunnelDetail" style="display:none;margin-top:8px;font-size:12px;color:var(--offline);white-space:pre-wrap;line-height:1.6;"></div>
         </div>
 
     </div>
@@ -471,6 +473,7 @@
             document.getElementById('addressText').textContent = addr;
             document.getElementById('addressText').className = 'address-text active';
             document.getElementById('addressBox').className = 'address-box active';
+            document.getElementById('tunnelDetail').style.display = 'none';
             document.getElementById('countdownText').textContent = '剩余 ~60 分钟';
 
             // 记录历史
@@ -488,9 +491,16 @@
             btnStart.style.display = 'flex';
             btnStop.style.display = 'none';
             setStatus('error', '启动失败', 'badge-error');
-            document.getElementById('addressText').textContent = data.message || '启动失败';
+            document.getElementById('addressText').textContent = '❌ ' + (data.message || '启动失败');
+            document.getElementById('addressBox').className = 'address-box error';
 
-            let detail = data.detail ? `<p style="margin-top:8px;font-size:12px;white-space:pre-wrap;">${data.detail}</p>` : '';
+            const detailEl = document.getElementById('tunnelDetail');
+            if (data.detail) {
+                detailEl.textContent = data.detail;
+                detailEl.style.display = 'block';
+            } else {
+                detailEl.style.display = 'none';
+            }
             toast('❌ ' + data.message);
         }
     });
@@ -505,6 +515,7 @@
         document.getElementById('addressText').textContent = '等待隧道启动...';
         document.getElementById('addressText').className = 'address-text';
         document.getElementById('addressBox').className = 'address-box';
+        document.getElementById('tunnelDetail').style.display = 'none';
         setStatus('stopped', '已停止', 'badge-stopped');
         document.getElementById('backendBadge').className = 'badge badge-stopped';
         document.getElementById('countdownText').textContent = '';
