@@ -552,10 +552,55 @@
                 <div id="upnpResult"></div>
             </div>
 
+            <!-- ===== DDNS 动态域名 ===== -->
+            <div class="upnp-card" style="border-left: 3px solid var(--mc-gold);">
+                <h3 style="display:flex;align-items:center;gap:8px;">
+                    🌐 动态域名
+                    <span id="ddnsStatusBadge" style="font-size:11px;background:rgba(136,136,136,0.2);color:var(--text2);padding:2px 8px;border-radius:10px;font-weight:400;">未配置</span>
+                </h3>
+                <p style="color:var(--text2);font-size:13px;margin-bottom:12px;">
+                    给你一个<strong style="color:var(--mc-gold);">永久免费域名</strong>，朋友永远连同一个地址。
+                </p>
+
+                <!-- 已配置 -->
+                <div id="ddnsReady" style="display:none;">
+                    <div style="background:rgba(76,175,80,0.1);border:1px solid rgba(76,175,80,0.3);border-radius:8px;padding:14px;margin-bottom:10px;">
+                        <p style="color:var(--online);font-weight:600;margin-bottom:4px;">✅ 域名已就绪</p>
+                        <div class="big-address" onclick="copyDdnsAddr(this)" style="font-size:18px;color:var(--mc-gold);">
+                            <span id="ddnsDomainDisplay"></span>
+                        </div>
+                        <p class="copy-hint">👆 点击复制，发给朋友</p>
+                        <p style="font-size:11px;color:var(--text2);margin-top:6px;">
+                            IP: <span id="ddnsIP" style="color:#fff;">-</span> ·
+                            更新: <span id="ddnsLastUpdate" style="color:#fff;">-</span>
+                        </p>
+                        <div style="margin-top:8px;display:flex;gap:8px;">
+                            <button class="btn btn-bg btn-sm" onclick="updateDDNSNow()">🔄 手动刷新</button>
+                            <button class="btn btn-bg btn-sm" onclick="resetDDNS()">🗑 解绑</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 未配置 -->
+                <div id="ddnsSetup">
+                    <p style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.8;">
+                        ① <a href="https://www.duckdns.org" target="_blank" style="color:var(--mc-gold);font-weight:600;">👉 点这里注册 DuckDNS</a>（用 GitHub/Google 直接登录）<br>
+                        ② 输入你想要的域名 → 点 add domain<br>
+                        ③ 复制页面上显示的 token → 填入下方：
+                    </p>
+                    <div style="display:flex;gap:8px;">
+                        <input class="input input-sm" type="text" id="ddnsDomain" placeholder="域名（如 mymc）" style="flex:1;">
+                        <input class="input input-sm" type="text" id="ddnsToken" placeholder="粘贴 token" style="flex:2;font-family:Consolas,monospace;">
+                        <button class="btn btn-primary btn-sm" onclick="setupDDNS()" style="white-space:nowrap;">🔗 一键绑定</button>
+                    </div>
+                    <div id="ddnsMsg" style="margin-top:8px;font-size:12px;"></div>
+                </div>
+            </div>
+
             <div class="hint-box">
                 <strong>📖 说明：</strong><br>
                 • UPnP 会自动配置路由器端口转发，让你获得一个<strong>外网可访问的地址</strong><br>
-                • 映射成功后，把外网地址发给朋友，他们就能直接连上你的 Minecraft<br>
+                • 配合 <strong>动态域名</strong> 使用，朋友永远用固定域名连接你<br>
                 • 如果映射失败，可能是路由器不支持或未开启 UPnP 功能<br>
                 • <strong>备选方案：</strong>可以使用 🚇 隧道穿透、樱花穿透(frp)、Radmin VPN、Zerotier 等工具
             </div>
@@ -989,6 +1034,82 @@
                 toast(`✅ 已复制: ${addr}`);
             });
         }
+
+        // ========== DDNS 动态域名 ==========
+        function loadDDNSStatus() { socket.emit('ddns-status'); }
+
+        function setupDDNS() {
+            const domain = document.getElementById('ddnsDomain').value.trim();
+            const token = document.getElementById('ddnsToken').value.trim();
+            if (!domain || !token) { toast('请填写域名和 token'); return; }
+            const msg = document.getElementById('ddnsMsg');
+            msg.innerHTML = '<span style="color:var(--mc-gold);">⏳ 绑定中...</span>';
+            socket.emit('ddns-setup', { domain, token });
+        }
+
+        socket.on('ddns-setup-result', (data) => {
+            const msg = document.getElementById('ddnsMsg');
+            if (data.success) {
+                msg.innerHTML = '';
+                document.getElementById('ddnsSetup').style.display = 'none';
+                document.getElementById('ddnsReady').style.display = 'block';
+                document.getElementById('ddnsDomainDisplay').textContent = data.domain + ':25565';
+                document.getElementById('ddnsStatusBadge').textContent = '已绑定 ✅';
+                document.getElementById('ddnsStatusBadge').style.background = 'rgba(76,175,80,0.2)';
+                document.getElementById('ddnsStatusBadge').style.color = 'var(--online)';
+                toast('✅ 域名已绑定: ' + data.domain);
+                socket.emit('ddns-update');
+            } else {
+                msg.innerHTML = '<span style="color:var(--offline);">❌ ' + data.message + '</span>';
+            }
+        });
+
+        socket.on('ddns-status', (data) => {
+            if (data.enabled) {
+                document.getElementById('ddnsSetup').style.display = 'none';
+                document.getElementById('ddnsReady').style.display = 'block';
+                document.getElementById('ddnsDomainDisplay').textContent = data.domain + ':25565';
+                document.getElementById('ddnsIP').textContent = data.lastIP || '-';
+                document.getElementById('ddnsLastUpdate').textContent = data.lastUpdate
+                    ? new Date(data.lastUpdate).toLocaleTimeString('zh-CN')
+                    : '-';
+                document.getElementById('ddnsStatusBadge').textContent = '已绑定 ✅';
+                document.getElementById('ddnsStatusBadge').style.background = 'rgba(76,175,80,0.2)';
+                document.getElementById('ddnsStatusBadge').style.color = 'var(--online)';
+            }
+        });
+
+        socket.on('ddns-update-result', (data) => {
+            if (data.success) {
+                document.getElementById('ddnsIP').textContent = data.ip || '-';
+                document.getElementById('ddnsLastUpdate').textContent = new Date().toLocaleTimeString('zh-CN');
+                if (data.changed) toast('🔄 域名 IP 已更新');
+            }
+        });
+
+        function updateDDNSNow() {
+            toast('正在刷新...');
+            socket.emit('ddns-update');
+        }
+
+        function resetDDNS() {
+            if (!confirm('确定解绑动态域名？')) return;
+            socket.emit('ddns-setup', { domain: '', token: '' });
+            document.getElementById('ddnsReady').style.display = 'none';
+            document.getElementById('ddnsSetup').style.display = 'block';
+            document.getElementById('ddnsStatusBadge').textContent = '未配置';
+            document.getElementById('ddnsStatusBadge').style.background = 'rgba(136,136,136,0.2)';
+            document.getElementById('ddnsStatusBadge').style.color = 'var(--text2)';
+            toast('已解绑');
+        }
+
+        function copyDdnsAddr(el) {
+            const addr = el.textContent.trim();
+            navigator.clipboard.writeText(addr).then(() => toast('✅ 已复制: ' + addr));
+        }
+
+        // 初始化 DDNS
+        setTimeout(loadDDNSStatus, 500);
 
         // ========== 网络信息 ==========
         function loadNetworkInfo() {

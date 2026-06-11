@@ -13,6 +13,7 @@ const { pingServer } = require('./lib/mc-ping');
 const { scanLAN, LANScanner } = require('./lib/lan-scanner');
 const { setupMinecraftPortMapping } = require('./lib/upnp');
 const { checkTunnelReady, startTunnel, stopTunnel, getTunnelStatus, onRenew } = require('./lib/tunnel');
+const { setup: setupDDNS, getStatus: getDDNSStatus, updateIP: updateDDNS, onUpdate: onDDNSUpdate } = require('./lib/ddns');
 
 const app = express();
 
@@ -272,6 +273,21 @@ function setupIO(srv) {
             socket.emit('tunnel-stop-result', await stopTunnel());
         });
         socket.on('tunnel-status-query', () => { socket.emit('tunnel-status-result', getTunnelStatus()); });
+
+        // ===== DDNS 动态域名 =====
+        socket.on('ddns-setup', async (data) => {
+            const { domain, token } = data || {};
+            const result = setupDDNS(domain, token);
+            socket.emit('ddns-setup-result', result);
+            if (result.success) {
+                const status = getDDNSStatus();
+                socket.emit('ddns-status', status);
+            }
+        });
+        socket.on('ddns-status', () => { socket.emit('ddns-status', getDDNSStatus()); });
+        socket.on('ddns-update', async () => {
+            socket.emit('ddns-update-result', await updateDDNS(true));
+        });
 
         // ===== 断开 =====
         socket.on('disconnect-all', () => closeConnection(socket.id));
