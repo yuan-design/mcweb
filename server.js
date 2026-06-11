@@ -231,7 +231,23 @@ function setupIO(srv) {
             for (const [name, addrs] of Object.entries(ifaces))
                 for (const addr of addrs)
                     if (addr.family === 'IPv4') ips.push({ name, address: addr.address, internal: addr.internal, netmask: addr.netmask });
-            socket.emit('mc-network-info-result', { ips });
+            // 检测默认网关
+            let gateway = '';
+            try {
+                const { execSync } = require('child_process');
+                if (process.platform === 'win32') {
+                    const out = execSync('powershell -Command "Get-NetRoute -DestinationPrefix \'0.0.0.0/0\' | Select-Object -First 1 -ExpandProperty NextHop"', { encoding: 'utf-8', timeout: 5000, windowsHide: true }).trim();
+                    gateway = out;
+                } else {
+                    const out = execSync("ip route | grep default | awk '{print $3}' | head -1", { encoding: 'utf-8', timeout: 5000 }).trim();
+                    gateway = out;
+                }
+            } catch (e) { /* ignore */ }
+            // 匹配最佳内网IP
+            const localIP = ips.find(ip => ip.address.startsWith('192.168.'))?.address
+                || ips.find(ip => ip.address.startsWith('10.'))?.address
+                || ips.find(ip => !ip.internal)?.address || '';
+            socket.emit('mc-network-info-result', { ips, gateway, localIP });
         });
         socket.on('mc-launch-join', async (data) => {
             const { host, port = 25565 } = data;

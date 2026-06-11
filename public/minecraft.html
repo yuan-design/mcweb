@@ -534,22 +534,69 @@
 
         <!-- ========== UPnP 端口映射视图 ========== -->
         <div class="view" id="view-upnp">
-            <div class="upnp-card">
-                <h3>🔧 路由器端口映射 (UPnP)</h3>
-                <p style="color:var(--text2);font-size:13px;margin-bottom:14px;">
-                    自动配置路由器，让你的 Minecraft LAN 游戏可以被外网的朋友访问。
-                    适用于和朋友不在同一局域网时的联机场景。
-                </p>
+            <!-- ===== 网络信息 ===== -->
+            <div class="upnp-card" style="border-left: 3px solid var(--mc-blue);">
+                <h3>📡 你的网络信息</h3>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0;">
+                    <div style="background:var(--bg2);padding:10px;border-radius:8px;">
+                        <span style="color:var(--text2);font-size:11px;">路由器地址</span>
+                        <div style="font-family:Consolas;font-size:16px;color:var(--mc-gold);margin-top:2px;">
+                            <a id="gatewayLink" href="#" target="_blank" style="color:var(--mc-gold);">-</a>
+                        </div>
+                    </div>
+                    <div style="background:var(--bg2);padding:10px;border-radius:8px;">
+                        <span style="color:var(--text2);font-size:11px;">你的电脑 IP</span>
+                        <div style="font-family:Consolas;font-size:16px;color:var(--online);margin-top:2px;" id="localIP">-</div>
+                    </div>
+                </div>
+                <button class="btn btn-bg btn-sm" onclick="openRouter()">🌐 打开路由器后台</button>
+                <span style="font-size:11px;color:var(--text2);margin-left:8px;">账号密码看路由器底部贴纸</span>
+            </div>
+
+            <!-- ===== MC 端口 ===== -->
+            <div class="upnp-card" style="margin-top:0;">
                 <div style="display:flex;gap:10px;align-items:end;">
                     <div class="form-group" style="flex:1;">
                         <label>Minecraft 端口号</label>
                         <input class="input" type="number" id="upnpPort" value="25565" min="1" max="65535" style="width:100%;">
                     </div>
-                    <button class="btn btn-primary" id="btnUpnpMap" onclick="startUpnpMapping()">
-                        🔗 开始映射
-                    </button>
                 </div>
+                <p style="font-size:11px;color:var(--text2);margin-top:4px;">
+                    MC「对局域网开放」后在聊天栏看到的端口号
+                </p>
+            </div>
+
+            <!-- ===== 方案A: UPnP 自动 ===== -->
+            <div class="upnp-card" style="border-left: 3px solid var(--mc-green);">
+                <h3>🤖 方案A — UPnP 自动映射（推荐）</h3>
+                <p style="color:var(--text2);font-size:12px;margin-bottom:8px;">
+                    前提：路由器 <strong style="color:var(--mc-gold);">已开启 UPnP 功能</strong>（进路由器后台 → 高级设置 → 找到 UPnP → 打开）
+                </p>
+                <button class="btn btn-primary" id="btnUpnpMap" onclick="startUpnpMapping()">🔗 自动映射</button>
                 <div id="upnpResult"></div>
+            </div>
+
+            <!-- ===== 方案B: 手动端口转发 ===== -->
+            <div class="upnp-card" style="border-left: 3px solid var(--mc-blue);">
+                <h3>🛠 方案B — 手动端口转发（万能方案）</h3>
+                <p style="color:var(--text2);font-size:12px;margin-bottom:8px;">
+                    不依赖 UPnP，所有路由器都支持。自己进后台填一条规则即可。
+                </p>
+                <div id="manualFwdGuide" style="background:var(--bg2);padding:12px;border-radius:8px;font-size:12px;line-height:2;">
+                    <span style="color:var(--text2);">① 点上方「</span><span style="color:var(--mc-gold);">🌐 打开路由器后台</span><span style="color:var(--text2);">」→ 登录</span><br>
+                    <span style="color:var(--text2);">② 找到「</span><span style="color:#fff;">端口转发 / 虚拟服务器</span><span style="color:var(--text2);">」</span><br>
+                    <span style="color:var(--text2);">③ 添加规则：</span><br>
+                    <div style="background:var(--bg1);padding:8px 12px;border-radius:6px;margin:4px 0;font-family:Consolas;">
+                        <span style="color:var(--text2);">服务名: </span><span style="color:var(--online);">Minecraft</span><br>
+                        <span style="color:var(--text2);">内部IP: </span><span style="color:var(--online);" id="manualIP">-</span><br>
+                        <span style="color:var(--text2);">内部端口: </span><span style="color:var(--online);" id="manualPort">25565</span><br>
+                        <span style="color:var(--text2);">外部端口: </span><span style="color:var(--online);" id="manualExtPort">25565</span><br>
+                        <span style="color:var(--text2);">协议: </span><span style="color:var(--online);">TCP</span>
+                    </div>
+                    <span style="color:var(--text2);">④ 保存 → 完成 ✅</span>
+                </div>
+                <p style="font-size:11px;color:var(--mc-gold);margin-top:8px;">💡 建议在路由器里把电脑IP设为「DHCP保留/静态分配」，防止重启后IP变化导致映射失效。</p>
+            </div>
             </div>
 
             <!-- ===== DDNS 动态域名 ===== -->
@@ -978,6 +1025,55 @@
             toast(`📋 地址已复制: ${addr}\n请在 Minecraft 多人游戏中"直接连接"`);
         }
 
+        // ========== 网络信息 & 路由器 ==========
+        let gatewayIP = '';
+        let myLocalIP = '';
+
+        function loadNetworkInfo() {
+            if (socket.connected) socket.emit('mc-network-info');
+            else socket.once('connect', () => socket.emit('mc-network-info'));
+        }
+
+        socket.on('mc-network-info-result', (data) => {
+            gatewayIP = data.gateway || '';
+            myLocalIP = data.localIP || '';
+
+            const gwLink = document.getElementById('gatewayLink');
+            if (gwLink && gatewayIP) {
+                gwLink.textContent = gatewayIP;
+                gwLink.href = 'http://' + gatewayIP;
+            }
+            const lip = document.getElementById('localIP');
+            if (lip) lip.textContent = myLocalIP || '未检测到';
+
+            // 更新手动端口转发指南
+            const mip = document.getElementById('manualIP');
+            if (mip) mip.textContent = myLocalIP || '（你的电脑IP）';
+            updateManualGuidePort();
+        });
+
+        function openRouter() {
+            if (gatewayIP) {
+                window.open('http://' + gatewayIP, '_blank');
+            } else {
+                toast('未检测到路由器地址，请手动输入 192.168.1.1 或 192.168.0.1');
+            }
+        }
+
+        // 端口号变化时同步更新手动指南
+        document.getElementById('upnpPort')?.addEventListener('input', updateManualGuidePort);
+
+        function updateManualGuidePort() {
+            const port = parseInt(document.getElementById('upnpPort')?.value) || 25565;
+            const mp = document.getElementById('manualPort');
+            const mep = document.getElementById('manualExtPort');
+            if (mp) mp.textContent = port;
+            if (mep) mep.textContent = port;
+        }
+
+        // 页面加载时获取网络信息
+        loadNetworkInfo();
+
         // ========== UPnP 端口映射 ==========
         async function startUpnpMapping() {
             const port = parseInt(document.getElementById('upnpPort').value) || 25565;
@@ -1116,10 +1212,7 @@
         // 初始化 DDNS
         setTimeout(loadDDNSStatus, 500);
 
-        // ========== 网络信息 ==========
-        function loadNetworkInfo() {
-            socket.emit('mc-network-info');
-        }
+        // ========== 旧的网络信息函数已合并到 UPnP 区域 ==========
 
         socket.on('mc-network-info-result', (data) => {
             const container = document.getElementById('networkInfo');
