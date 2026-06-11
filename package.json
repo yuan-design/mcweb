@@ -7,8 +7,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "build": "pkg . --target node24-win-x64 --output dist/端口远程连接工具.exe",
-    "build-all": "pkg . --target node24-win-x64,node24-linux-x64,node24-macos-x64 --output dist/port-connector"
+    "build": "npm run clean-dist && pkg . --target node24-win-x64 --output dist/端口远程连接工具.exe",
+    "build-all": "npm run clean-dist && pkg . --target node24-win-x64,node24-linux-x64,node24-macos-x64 --output dist/port-connector",
+    "clean-dist": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true});require('fs').mkdirSync('dist',{recursive:true})\""
   },
   "pkg": {
     "assets": [
