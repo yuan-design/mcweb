@@ -2,7 +2,10 @@
  * MCLJ
  */
 
-const { app, BrowserWindow, shell } = require('electron');
+const { app, BrowserWindow, shell, Menu } = require('electron');
+
+// 去掉菜单栏
+Menu.setApplicationMenu(null);
 const path = require('path');
 const fs = require('fs');
 
