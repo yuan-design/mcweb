@@ -7,7 +7,7 @@
     "start": "electron .",
     "dev": "node server.js",
     "build": "npm run clean-dist && electron-builder --win portable",
-    "build-exe": "npm run clean-dist && pkg . --target node24-win-x64 --output dist/服务器.exe",
+    "build-exe": "npm run clean-dist && pkg . --target node24-win-x64 --output dist/服务器.exe && node -e \"require('fs').cpSync('lib/bin','dist/lib/bin',{recursive:true})\"",
     "clean-dist": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true});require('fs').mkdirSync('dist',{recursive:true})\""
   },
   "build": {
@@ -22,6 +22,12 @@
       "lib/**/*",
       "public/**/*",
       "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "lib/bin",
+        "to": "lib/bin"
+      }
     ],
     "win": {
       "target": "portable",
